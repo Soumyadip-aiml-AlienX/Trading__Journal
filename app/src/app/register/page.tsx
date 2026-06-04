@@ -193,13 +193,27 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* Form Container */}
-        <div className="glass-card p-6 sm:p-8 border border-white/5 relative overflow-hidden shadow-2xl rounded-2xl bg-[#0f1015]/95">
+        {/* Tabbed Container Box */}
+        <div className="glass-card overflow-hidden shadow-2xl rounded-2xl bg-[#0f1015]/95 border border-white/5 relative">
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500/30 to-transparent" />
           
-          <h2 className="text-base font-bold text-white mb-6 flex items-center gap-2">
-            <span>📝</span> Create Trading Account
-          </h2>
+          {/* Tabs */}
+          <div className="flex border-b border-white/5 bg-[#14151b]">
+            <Link
+              href="/login"
+              className="flex-1 py-4 text-center text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent hover:bg-white/[0.01]"
+            >
+              Sign in
+            </Link>
+            <button
+              type="button"
+              className="flex-1 py-4 text-center text-xs font-bold text-white border-b-2 border-[#10b981] relative cursor-default"
+            >
+              Create account
+            </button>
+          </div>
+
+          <div className="p-6 sm:p-8 space-y-6">
 
           <form onSubmit={handleRegister} className="space-y-4">
             {error && (
@@ -422,13 +436,6 @@ export default function RegisterPage() {
             </button>
           )}
 
-          <div className="mt-5 pt-4 border-t border-white/5 text-center">
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Already have an account?{' '}
-              <Link href="/login" className="text-[#10b981] hover:underline font-semibold">
-                Sign In
-              </Link>
-            </p>
           </div>
         </div>
 
