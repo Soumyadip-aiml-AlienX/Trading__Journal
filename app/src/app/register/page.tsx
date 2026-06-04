@@ -12,9 +12,16 @@ declare global {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountType, setAccountType] = useState('Standard user');
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -125,14 +132,24 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (!agreeTerms) {
+      setError('You must agree to the Terms of Service and Privacy Policy.');
+      return;
+    }
     setLoading(true);
     setError(null);
+
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
 
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name: fullName || 'Trader', email, password }),
       });
 
       const data = await res.json();
@@ -141,6 +158,7 @@ export default function RegisterPage() {
         localStorage.setItem('maven_logged_in', 'true');
         localStorage.setItem('user_name', data.user.name || 'Prop Trader Pro');
         localStorage.setItem('user_email', data.user.email || email);
+        localStorage.setItem('user_role', accountType);
         window.location.href = '/';
       } else {
         setError(data.error || 'Failed to create account.');
@@ -161,95 +179,201 @@ export default function RegisterPage() {
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-yellow-500/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-lg relative z-10 my-8">
         {/* Logo Banner */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-yellow-500 to-amber-500 shadow-lg shadow-yellow-500/20 mb-4 border border-yellow-400/20">
-            <span className="text-3xl" role="img" aria-label="maven-logo">⚡</span>
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-yellow-500 to-amber-500 shadow-lg shadow-yellow-500/20 mb-3 border border-yellow-400/20">
+            <span className="text-2xl" role="img" aria-label="maven-logo">⚡</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold tracking-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
             Maven Journal
           </h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1.5 font-medium">
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-medium">
             SMC & ICT Hybrid Trading Analytics Console
           </p>
         </div>
 
         {/* Form Container */}
-        <div className="glass-card p-6 sm:p-8 border border-white/5 relative overflow-hidden shadow-2xl rounded-2xl">
+        <div className="glass-card p-6 sm:p-8 border border-white/5 relative overflow-hidden shadow-2xl rounded-2xl bg-[#0f1015]/95">
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500/30 to-transparent" />
           
-          <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+          <h2 className="text-base font-bold text-white mb-6 flex items-center gap-2">
             <span>📝</span> Create Trading Account
           </h2>
 
-          <form onSubmit={handleRegister} className="space-y-5">
+          <form onSubmit={handleRegister} className="space-y-4">
             {error && (
-              <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-500/20 text-red-400 text-xs font-medium leading-relaxed">
+              <div className="p-3 rounded-lg bg-red-950/40 border border-red-500/20 text-red-400 text-xs font-medium leading-relaxed">
                 ⚠️ {error}
               </div>
             )}
 
-            <div>
-              <label htmlFor="name-input" className="form-label text-white/70 font-semibold mb-1.5 block">
-                Full Name
-              </label>
-              <input
-                id="name-input"
-                type="text"
-                required
-                className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-10 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+            {/* Account Type Selector Grid */}
+            <div className="space-y-1.5">
+              <label className="form-label text-[10px] font-bold tracking-wider text-white/50">Account Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'Administrator', label: 'Administrator', dotColor: 'bg-blue-500' },
+                  { id: 'Moderator', label: 'Moderator', dotColor: 'bg-amber-600' },
+                  { id: 'Standard user', label: 'Standard user', dotColor: 'bg-emerald-500' },
+                  { id: 'Viewer', label: 'Viewer', dotColor: 'bg-purple-500' },
+                ].map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setAccountType(type.id)}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer text-left
+                      ${accountType === type.id 
+                        ? 'bg-slate-900/60 border-emerald-500/40 text-white' 
+                        : 'bg-[#14151b] border-white/5 text-slate-400 hover:bg-slate-900/40 hover:border-white/10'
+                      }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${type.dotColor}`} />
+                    <span>{type.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="email-input" className="form-label text-white/70 font-semibold mb-1.5 block">
-                Email Address
-              </label>
-              <input
-                id="email-input"
-                type="email"
-                required
-                className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-10 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+            {/* First Name & Last Name (Side by Side) */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="first-name" className="form-label text-[10px] font-bold tracking-wider text-white/50 flex items-center gap-1.5">
+                  First name
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-500 text-sm">👤</span>
+                  <input
+                    id="first-name"
+                    type="text"
+                    required
+                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 pl-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                    placeholder="Ada"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="last-name" className="form-label text-[10px] font-bold tracking-wider text-white/50 flex items-center gap-1.5">
+                  Last name
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-500 text-sm">👤</span>
+                  <input
+                    id="last-name"
+                    type="text"
+                    required
+                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 pl-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                    placeholder="Lovelace"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Work Email */}
             <div>
-              <label htmlFor="password-input" className="form-label text-white/70 font-semibold mb-1.5 block">
-                Security Password
+              <label htmlFor="email-input" className="form-label text-[10px] font-bold tracking-wider text-white/50 flex items-center gap-1.5">
+                Work email
               </label>
-              <input
-                id="password-input"
-                type="password"
-                required
-                minLength={6}
-                className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-10 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
-                placeholder="At least 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-500 text-sm">✉️</span>
+                <input
+                  id="email-input"
+                  type="email"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 pl-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                  placeholder="ada@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
             </div>
 
+            {/* Password */}
+            <div>
+              <label htmlFor="password-input" className="form-label text-[10px] font-bold tracking-wider text-white/50 flex items-center gap-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-500 text-sm">🔒</span>
+                <input
+                  id="password-input"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 px-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                  placeholder="Min. 8 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2 text-slate-500 hover:text-white cursor-pointer select-none text-xs"
+                >
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label htmlFor="confirm-password" className="form-label text-[10px] font-bold tracking-wider text-white/50 flex items-center gap-1.5">
+                Confirm password
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-500 text-sm">✔️</span>
+                <input
+                  id="confirm-password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 px-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                  placeholder="Repeat password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-2 text-slate-500 hover:text-white cursor-pointer select-none text-xs"
+                >
+                  {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+            </div>
+
+            {/* Terms of Service Checkbox */}
+            <div className="flex items-start gap-2.5 py-1">
+              <input
+                id="agree-terms"
+                type="checkbox"
+                required
+                checked={agreeTerms}
+                onChange={(e) => setAgreeTerms(e.target.checked)}
+                className="rounded bg-slate-950/50 border-white/10 text-emerald-500 focus:ring-0 cursor-pointer w-4 h-4 mt-0.5"
+              />
+              <label htmlFor="agree-terms" className="text-[11px] text-[var(--color-text-secondary)] cursor-pointer select-none leading-relaxed">
+                I agree to the <span className="text-emerald-400 hover:underline">Terms of Service</span> and <span className="text-emerald-400 hover:underline">Privacy Policy</span>
+              </label>
+            </div>
+
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full h-10 text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-500 border-none text-slate-950 hover:brightness-110 shadow-lg shadow-yellow-500/10 cursor-pointer flex items-center justify-center gap-2 rounded-lg"
+              className="w-full h-10 text-xs font-bold bg-[#10b981] hover:bg-[#059669] border-none text-slate-950 hover:brightness-110 shadow-lg cursor-pointer flex items-center justify-center gap-2 rounded-lg transition-colors text-white"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                  <span>Creating Account...</span>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Creating account...</span>
                 </>
               ) : (
-                <>
-                  <span>Create Account</span> ➔
-                </>
+                <span>Create account</span>
               )}
             </button>
           </form>
@@ -298,10 +422,10 @@ export default function RegisterPage() {
             </button>
           )}
 
-          <div className="mt-6 pt-5 border-t border-white/5 text-center">
+          <div className="mt-5 pt-4 border-t border-white/5 text-center">
             <p className="text-xs text-[var(--color-text-muted)]">
               Already have an account?{' '}
-              <Link href="/login" className="text-yellow-500 hover:underline">
+              <Link href="/login" className="text-[#10b981] hover:underline font-semibold">
                 Sign In
               </Link>
             </p>
