@@ -9,6 +9,8 @@ import LayoutShell from '@/components/layout/LayoutShell';
 import QuickEntryModal from '@/components/shared/QuickEntryModal';
 import KeyboardShortcutHelper from '@/components/shared/KeyboardShortcutHelper';
 
+export const dynamic = 'force-dynamic';
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
