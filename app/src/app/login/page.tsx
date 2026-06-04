@@ -320,73 +320,127 @@ export default function LoginPage() {
       {/* Google Setup & Account Selector Dialog */}
       {showConfigModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="glass-card max-w-md w-full p-6 space-y-6 border border-yellow-500/20 shadow-2xl relative">
+          <div className="glass-card max-w-md w-full p-6 space-y-5 border border-yellow-500/20 shadow-2xl relative">
             <button
               onClick={() => setShowConfigModal(false)}
-              className="absolute top-4 right-4 text-xs text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-surface-overlay)] p-1 rounded"
+              className="absolute top-4 right-4 text-xs text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-surface-overlay)] p-1 rounded cursor-pointer"
               title="Close modal"
             >
               ✕
             </button>
-            <div className="text-center space-y-2">
-              <span className="text-3xl" role="img" aria-label="google-logo">🌐</span>
-              <h3 className="text-base font-bold text-white">Google Integration Setup</h3>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                To connect the official Google Account Selector popup, please add your Client ID:
-              </p>
+            
+            {/* Google Header Logo */}
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-md mb-2">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 14.98 1 12 1 7.35 1 3.37 3.67 1.39 7.56l3.85 2.99c.9-2.7 3.42-4.51 6.76-4.51z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.44h6.44c-.28 1.48-1.12 2.73-2.38 3.58l3.7 2.87c2.16-2 3.73-4.94 3.73-8.55z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.24 14.56c-.23-.69-.36-1.43-.36-2.2s.13-1.51.36-2.2L1.39 7.17C.5 8.97 0 10.93 0 13s.5 4.03 1.39 5.83l3.85-3.27z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.7-2.87c-1.03.69-2.35 1.1-4.26 1.1-3.34 0-5.86-1.81-6.76-4.51l-3.85 2.99C3.37 20.33 7.35 23 12 23z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-white">Choose an account</h3>
+              <p className="text-xs text-[var(--color-text-secondary)]">to continue to Maven Journal</p>
             </div>
 
-            <div className="bg-slate-950/50 p-4 rounded-lg border border-white/5 text-[10.5px] text-[var(--color-text-muted)] space-y-2 leading-relaxed">
-              <p className="font-bold text-yellow-500/90 uppercase tracking-wider text-[9px]">How to Enable:</p>
-              <ol className="list-decimal list-inside space-y-1.5">
-                <li>Go to Google Cloud Developer Console.</li>
-                <li>Create an OAuth 2.0 Client ID for Web Applications.</li>
-                <li>Add <code className="bg-white/5 px-1 py-0.5 rounded text-white font-mono">NEXT_PUBLIC_GOOGLE_CLIENT_ID="..."</code> to your <code className="text-white font-mono">.env.local</code>.</li>
-                <li>Restart your development server.</li>
-              </ol>
-            </div>
-
-            <div className="border-t border-white/5 pt-4 space-y-4">
-              <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider block text-center">
-                Simulated Google Account Login
-              </span>
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="modal-google-email" className="form-label">Google Account Email</label>
-                  <input
-                    id="modal-google-email"
-                    type="email"
-                    required
-                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
-                    placeholder="e.g., trader.joe@gmail.com"
-                    value={tempGoogleEmail}
-                    onChange={(e) => setTempGoogleEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="modal-google-name" className="form-label">Account User Name</label>
-                  <input
-                    id="modal-google-name"
-                    type="text"
-                    required
-                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
-                    placeholder="e.g., Trader Joe"
-                    value={tempGoogleName}
-                    onChange={(e) => setTempGoogleName(e.target.value)}
-                  />
-                </div>
+            {/* List of Simulated Google Accounts */}
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {[
+                { email: 'trader.maven@gmail.com', name: 'Maven Prop Trader', avatar: 'M' },
+                { email: 'john.doe@gmail.com', name: 'John Doe', avatar: 'J' },
+                { email: 'prop.trader.pro@gmail.com', name: 'Prop Trader Pro', avatar: 'P' },
+              ].map((acc) => (
                 <button
+                  key={acc.email}
                   type="button"
-                  disabled={loading || !tempGoogleEmail}
                   onClick={() => {
                     setShowConfigModal(false);
-                    handleGoogleLoginSuccess(tempGoogleEmail, tempGoogleName || 'Google Trader');
+                    handleGoogleLoginSuccess(acc.email, acc.name);
                   }}
-                  className="btn-primary w-full h-9 text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 hover:brightness-110 shadow-lg shadow-yellow-500/10 cursor-pointer rounded-lg flex items-center justify-center"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-800/60 border border-white/5 hover:border-white/10 text-left transition-all cursor-pointer"
                 >
-                  <span>Select & Continue</span>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-500/20 to-amber-500/20 text-yellow-500 font-bold flex items-center justify-center text-xs border border-yellow-500/10">
+                    {acc.avatar}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-white truncate">{acc.name}</div>
+                    <div className="text-[10px] text-[var(--color-text-secondary)] truncate">{acc.email}</div>
+                  </div>
+                  <span className="text-[10px] text-yellow-500 font-bold">Sign In</span>
                 </button>
-              </div>
+              ))}
+            </div>
+
+            {/* Manual Entry Form */}
+            <div className="border-t border-white/5 pt-4 space-y-3">
+              <details className="group">
+                <summary className="text-[11px] font-bold text-[var(--color-text-muted)] cursor-pointer select-none hover:text-white flex items-center gap-1 group-open:mb-3">
+                  <span>➕</span> Use another account / Custom Google credentials
+                </summary>
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label htmlFor="modal-google-email" className="form-label">Google Account Email</label>
+                    <input
+                      id="modal-google-email"
+                      type="email"
+                      required
+                      className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                      placeholder="e.g., my.custom.account@gmail.com"
+                      value={tempGoogleEmail}
+                      onChange={(e) => setTempGoogleEmail(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="modal-google-name" className="form-label">Account Display Name</label>
+                    <input
+                      id="modal-google-name"
+                      type="text"
+                      required
+                      className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                      placeholder="e.g., Alex Mercer"
+                      value={tempGoogleName}
+                      onChange={(e) => setTempGoogleName(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={loading || !tempGoogleEmail}
+                    onClick={() => {
+                      setShowConfigModal(false);
+                      handleGoogleLoginSuccess(tempGoogleEmail, tempGoogleName || 'Google Trader');
+                    }}
+                    className="btn-primary w-full h-9 text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 hover:brightness-110 shadow-lg cursor-pointer rounded-lg flex items-center justify-center"
+                  >
+                    <span>Select & Continue</span>
+                  </button>
+                </div>
+              </details>
+
+              <details className="group">
+                <summary className="text-[10px] text-[var(--color-text-muted)] hover:text-white cursor-pointer select-none flex items-center gap-1">
+                  <span>⚙️</span> Developer instructions (Official Google OAuth)
+                </summary>
+                <div className="mt-2 bg-slate-950/50 p-3 rounded-lg border border-white/5 text-[10px] text-[var(--color-text-muted)] space-y-1.5 leading-relaxed">
+                  <p className="font-bold text-yellow-500/90 uppercase tracking-wider text-[8px]">Steps to enable real popup:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Create OAuth Client ID on Google Cloud Console.</li>
+                    <li>Add <code className="bg-white/5 px-1 py-0.5 rounded text-white font-mono text-[9px]">NEXT_PUBLIC_GOOGLE_CLIENT_ID="..."</code> to <code className="text-white font-mono text-[9px]">.env.local</code>.</li>
+                    <li>Restart dev server.</li>
+                  </ol>
+                </div>
+              </details>
             </div>
           </div>
         </div>
