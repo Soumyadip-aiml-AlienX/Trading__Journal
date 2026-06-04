@@ -43,7 +43,7 @@ export default function DrawdownHeader({ onMenuClick }: DrawdownHeaderProps) {
       )}
 
       {/* Main Header Bar */}
-      <header role="banner" className="h-12 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center px-5 gap-6 text-xs font-medium">
+      <header role="banner" className="h-12 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center px-5 gap-3 sm:gap-6 text-xs font-medium">
         {/* Mobile Menu Button */}
         <button
           type="button"
@@ -55,8 +55,9 @@ export default function DrawdownHeader({ onMenuClick }: DrawdownHeaderProps) {
         </button>
 
         {/* Today's P&L */}
-        <div className="flex items-center gap-2">
-          <span className="text-[var(--color-text-muted)]">Today&apos;s P&amp;L</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="hidden xs:inline text-[var(--color-text-muted)]">Today&apos;s P&amp;L</span>
+          <span className="xs:hidden text-[var(--color-text-muted)]">P&amp;L</span>
           <span className={`font-bold text-sm ${pnlColor}`}>
             <span aria-hidden="true">{data.todayPnl > 0 ? '▲ ' : data.todayPnl < 0 ? '▼ ' : ''}</span>
             {data.todayPnl >= 0 ? '+' : ''}
@@ -65,12 +66,12 @@ export default function DrawdownHeader({ onMenuClick }: DrawdownHeaderProps) {
         </div>
 
         {/* Divider */}
-        <div className="w-px h-5 bg-[var(--color-border)]" />
+        <div className="hidden sm:block w-px h-5 bg-[var(--color-border)]" />
 
         {/* Daily Drawdown */}
-        <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
           <span className="text-[var(--color-text-muted)]">Daily DD</span>
-          <div className="w-24 h-1.5 rounded-full bg-[var(--color-surface-overlay)] overflow-hidden">
+          <div className="hidden lg:block w-24 h-1.5 rounded-full bg-[var(--color-surface-overlay)] overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${dailyBarColor}`}
               style={{ width: `${Math.min((data.dailyUsed / 4) * 100, 100)}%` }}
@@ -82,10 +83,10 @@ export default function DrawdownHeader({ onMenuClick }: DrawdownHeaderProps) {
         </div>
 
         {/* Divider */}
-        <div className="w-px h-5 bg-[var(--color-border)]" />
+        <div className="hidden md:block w-px h-5 bg-[var(--color-border)]" />
 
         {/* Daily Remaining */}
-        <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2 shrink-0">
           <span className="text-[var(--color-text-muted)]">Remaining</span>
           <span className="text-[var(--color-text-secondary)] font-semibold">
             {data.dailyRemaining.toFixed(1)}%
@@ -93,10 +94,10 @@ export default function DrawdownHeader({ onMenuClick }: DrawdownHeaderProps) {
         </div>
 
         {/* Divider */}
-        <div className="w-px h-5 bg-[var(--color-border)]" />
+        <div className="hidden lg:block w-px h-5 bg-[var(--color-border)]" />
 
         {/* Overall Drawdown */}
-        <div className="flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
           <span className="text-[var(--color-text-muted)]">Overall DD</span>
           <span className="text-[var(--color-text-secondary)]">
             {data.overallUsed.toFixed(1)}% / 8%
@@ -107,7 +108,7 @@ export default function DrawdownHeader({ onMenuClick }: DrawdownHeaderProps) {
         <div className="flex-1" />
 
         {/* Trades Count */}
-        <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
           <span className="text-[var(--color-text-muted)]">Trades Today</span>
           <span className={`font-bold ${data.tradesCount >= data.maxTrades ? 'text-sell' : 'text-[var(--color-text-primary)]'}`}>
             {data.tradesCount}/{data.maxTrades}
@@ -115,11 +116,11 @@ export default function DrawdownHeader({ onMenuClick }: DrawdownHeaderProps) {
         </div>
 
         {/* Phase */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-accent-dim)]">
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-accent-dim)] shrink-0">
           <span className="text-[var(--color-accent-light)] font-semibold">
             {data.phase}
           </span>
-          <span className="text-[var(--color-text-muted)]">
+          <span className="hidden md:inline text-[var(--color-text-muted)]">
             {data.phaseProgress.toFixed(1)}%/{data.phaseTarget}%
           </span>
         </div>
