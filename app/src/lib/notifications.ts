@@ -1,8 +1,14 @@
 import prisma from '@/lib/prisma';
 
-export async function sendNotification(message: string) {
+export async function sendNotification(message: string, userId?: string) {
   try {
-    const settings = await prisma.settings.findFirst();
+    if (!userId) {
+      console.warn('sendNotification: No userId provided for setting lookup');
+      return;
+    }
+    const settings = await prisma.settings.findUnique({
+      where: { userId }
+    });
     if (!settings) return;
 
     // Discord Webhook notification

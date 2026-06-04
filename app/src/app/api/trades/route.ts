@@ -9,10 +9,16 @@ import {
 import { sendNotification } from '@/lib/notifications';
 import { TradeInputSchema } from '@/lib/schemas';
 import { rateLimit } from '@/lib/rate-limit';
+import { getUserFromRequest } from '@/lib/auth';
 
-// GET all trades
+// GET all trades for current user
 export async function GET(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const asset = searchParams.get('asset');
     const session = searchParams.get('session');
@@ -22,7 +28,7 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId: user.id };
     if (asset) where.asset = asset;
     if (session) where.session = session;
     if (direction) where.direction = direction;
@@ -50,9 +56,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST create new trade
+// POST create new trade for current user
 export async function POST(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const { allowed } = rateLimit(`trades:${ip}`, { maxRequests: 20, windowMs: 60_000 });
     if (!allowed) {
@@ -72,8 +83,9 @@ export async function POST(request: NextRequest) {
     }
     const body = result.data;
 
-    // Generate trade code
+    // Generate trade code scoped to this user
     const lastTrade = await prisma.trade.findFirst({
+      where: { userId: user.id },
       orderBy: { tradeCode: 'desc' },
       select: { tradeCode: true },
     });
@@ -103,6 +115,7 @@ export async function POST(request: NextRequest) {
 
     const trade = await prisma.trade.create({
       data: {
+        userId: user.id,
         tradeCode,
         date: body.date,
         entryTime: new Date(body.entryTime.includes('T') ? body.entryTime : `${bodyRaw.date}T${body.entryTime}:00Z`),
@@ -144,7 +157,7 @@ export async function POST(request: NextRequest) {
         brokenRule: body.brokenRule ?? null,
         pressureToTrade: body.pressureToTrade,
         status,
-        dailyLogDate: null,
+        dailyLogId: null,
       },
     });
 
@@ -152,7 +165,7 @@ export async function POST(request: NextRequest) {
     try {
       const directionEmoji = trade.direction === 'BUY' ? '🟢' : '🔴';
       const notificationMessage = `[MAVEN JOURNAL] ${directionEmoji} ${trade.direction} Entered: ${trade.asset} @ ${trade.entryPrice} | SL: ${trade.stopLoss} | TP1: ${trade.tp1} | Checklist: ${trade.checklistScore}/11`;
-      await sendNotification(notificationMessage);
+      await sendNotification(notificationMessage, user.id);
     } catch (err) {
       console.error('Failed to send entry notification:', err);
     }

@@ -1,12 +1,27 @@
 // Maven Trading Journal - Database Schema
-// Using Prisma ORM with SQLite
+// Using Prisma ORM
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Hashed password
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trades        Trade[]
+  dailyLogs     DailyLog[]
+  settings      Settings[]
+  webhookAlerts WebhookAlert[]
+  lessons       Lesson[]
 }
 
 model Trade {
@@ -53,12 +68,16 @@ model Trade {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  dailyLogDate     DateTime?
-  dailyLog         DailyLog? @relation(fields: [dailyLogDate], references: [date])
+  dailyLogId       String?
+  dailyLog         DailyLog? @relation(fields: [dailyLogId], references: [id], onDelete: SetNull)
+
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model DailyLog {
-  date              DateTime @id
+  id                String   @id @default(cuid())
+  date              DateTime
   mentalState       Int      // 1-10
   physicalState     String   // Well Rested, Slightly Tired, Fatigued
   marketConfidence  Int      // 1-10
@@ -100,14 +119,19 @@ model DailyLog {
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([date, userId])
 }
 
 model Settings {
-  id              Int    @id @default(1)
-  accountSize     Float  @default(100000)
-  currentPhase    String @default("Phase 1")
-  riskPerTrade    Float  @default(1.5)
-  maxTradesPerDay Int    @default(2)
+  id              String   @id @default(cuid())
+  accountSize     Float    @default(100000)
+  currentPhase    String   @default("Phase 1")
+  riskPerTrade    Float    @default(1.5)
+  maxTradesPerDay Int      @default(2)
   webhookUrl      String?
   screenshotPath  String?
   googleSheetId   String?
@@ -115,25 +139,31 @@ model Settings {
   discordWebhook  String?
   telegramToken   String?
   telegramChatId  String?
-  onboardingDone  Boolean @default(false)
+  onboardingDone  Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model WebhookAlert {
-  id            String   @id @default(cuid())
-  ticker        String
-  action        String   // buy, sell
-  price         Float
-  stopLoss      Float?
-  tp1           Float?
-  tp2           Float?
-  session       String?
-  setup         String?
-  rawPayload    String   // Full JSON payload
-  status        String   @default("pending") // pending, converted, ignored
+  id               String   @id @default(cuid())
+  ticker           String
+  action           String   // buy, sell
+  price            Float
+  stopLoss         Float?
+  tp1              Float?
+  tp2              Float?
+  session          String?
+  setup            String?
+  rawPayload       String   // Full JSON payload
+  status           String   @default("pending") // pending, converted, ignored
   convertedTradeId String?
-  receivedAt    DateTime @default(now())
+  receivedAt       DateTime @default(now())
+
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Lesson {
@@ -144,4 +174,7 @@ model Lesson {
   tags        String?  // JSON array
   tradeId     String?  // Optional link to specific trade
   createdAt   DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

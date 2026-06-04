@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
+import { getUserFromRequest } from '@/lib/auth';
 
 // GET settings
 export async function GET() {
   try {
-    let settings = await prisma.settings.findFirst();
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let settings = await prisma.settings.findUnique({
+      where: { userId: user.id }
+    });
+
     if (!settings) {
       settings = await prisma.settings.create({
         data: {
+          userId: user.id,
           accountSize: 100000,
           currentPhase: 'Phase 1',
           riskPerTrade: 1.5,
@@ -26,6 +36,11 @@ export async function GET() {
 // PUT update settings
 export async function PUT(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const { allowed } = rateLimit(`settings:${ip}`, { maxRequests: 10, windowMs: 60_000 });
     if (!allowed) {
@@ -35,7 +50,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
 
     const settings = await prisma.settings.upsert({
-      where: { id: 1 },
+      where: { userId: user.id },
       update: {
         accountSize: body.accountSize,
         currentPhase: body.currentPhase,
@@ -49,6 +64,7 @@ export async function PUT(request: NextRequest) {
         onboardingDone: true,
       },
       create: {
+        userId: user.id,
         accountSize: body.accountSize,
         currentPhase: body.currentPhase,
         riskPerTrade: body.riskPerTrade ?? 1.5,

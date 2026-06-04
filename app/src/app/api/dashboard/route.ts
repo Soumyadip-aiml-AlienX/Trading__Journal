@@ -5,10 +5,17 @@ import {
   calculateProfitFactor,
   calculateExpectancy,
 } from '@/lib/calculations';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const trades = await prisma.trade.findMany({
+      where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -24,7 +31,9 @@ export async function GET() {
     );
 
     // Determine phase target
-    const settings = await prisma.settings.findFirst();
+    const settings = await prisma.settings.findUnique({
+      where: { userId: user.id }
+    });
     const phase = settings?.currentPhase ?? 'Phase 1';
     const target = phase === 'Phase 1' ? 8 : 5;
     const remainingToTarget = target - currentPnl;

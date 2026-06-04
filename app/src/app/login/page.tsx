@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 
 export default function LoginPage() {
@@ -163,19 +164,34 @@ export default function LoginPage() {
           <button
             type="button"
             disabled={loading}
-            onClick={() => {
+            onClick={async () => {
               setLoading(true);
               setError(null);
-              setTimeout(() => {
-                localStorage.setItem('maven_logged_in', 'true');
-                localStorage.setItem('user_name', 'John Doe');
-                localStorage.setItem('user_email', 'john.doe@gmail.com');
-                localStorage.setItem('user_login_type', 'google');
-                localStorage.setItem('user_avatar', 'https://lh3.googleusercontent.com/a/default-user=s96-c');
-                // Sync notification settings
-                localStorage.setItem('sync_source', 'Google Account Cloud Sync');
-                window.location.href = '/';
-              }, 1200);
+              try {
+                const res = await fetch('/api/auth/google', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: 'john.doe@gmail.com', name: 'John Doe' }),
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                  localStorage.setItem('maven_logged_in', 'true');
+                  localStorage.setItem('user_name', data.user.name);
+                  localStorage.setItem('user_email', data.user.email);
+                  localStorage.setItem('user_login_type', 'google');
+                  localStorage.setItem('user_avatar', 'https://lh3.googleusercontent.com/a/default-user=s96-c');
+                  // Sync notification settings
+                  localStorage.setItem('sync_source', 'Google Account Cloud Sync');
+                  window.location.href = '/';
+                } else {
+                  setError(data.error || 'Failed to authenticate via Google.');
+                  setLoading(false);
+                }
+              } catch (err) {
+                console.error(err);
+                setError('Google Sign-In connection failure.');
+                setLoading(false);
+              }
             }}
             className="w-full h-10 text-xs font-bold bg-white text-slate-900 hover:bg-slate-100 rounded-lg shadow-md cursor-pointer flex items-center justify-center gap-3 transition-colors border border-slate-200"
           >
@@ -211,8 +227,14 @@ export default function LoginPage() {
 
           {/* Quick Helper Credentials Banner */}
           <div className="mt-6 pt-5 border-t border-white/5 text-center">
+            <p className="text-xs text-[var(--color-text-muted)] mb-4">
+              Don't have an account?{' '}
+              <Link href="/register" className="text-yellow-500 hover:underline">
+                Register Account
+              </Link>
+            </p>
             <span className="text-[10px] text-[var(--color-text-muted)] font-semibold uppercase tracking-wider block mb-2">
-              Demo Credentials
+              Demo Credentials (If Registered)
             </span>
             <div className="inline-flex flex-wrap justify-center gap-x-4 gap-y-1 bg-white/[0.02] border border-white/5 py-2 px-3 rounded-lg text-[10px] font-mono text-yellow-500/90">
               <div><span className="text-[var(--color-text-muted)]">User:</span> demo@maven.com</div>

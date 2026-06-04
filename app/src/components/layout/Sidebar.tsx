@@ -60,7 +60,12 @@ export default function Sidebar({
     }
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error(err);
+    }
     localStorage.removeItem('maven_logged_in');
     localStorage.removeItem('user_name');
     localStorage.removeItem('user_email');

@@ -46,9 +46,11 @@ async function getAccessToken(email: string, privateKey: string): Promise<string
   return data.access_token;
 }
 
-export async function syncToGoogleSheets(): Promise<{ success: boolean; count: number; message: string }> {
+export async function syncToGoogleSheets(userId: string): Promise<{ success: boolean; count: number; message: string }> {
   try {
-    const settings = await prisma.settings.findFirst();
+    const settings = await prisma.settings.findUnique({
+      where: { userId }
+    });
     if (!settings || !settings.googleSheetId) {
       return { success: false, count: 0, message: 'Google Sheet ID not configured in Settings.' };
     }
@@ -75,8 +77,9 @@ export async function syncToGoogleSheets(): Promise<{ success: boolean; count: n
     const token = await getAccessToken(client_email, private_key);
     const spreadsheetId = settings.googleSheetId;
 
-    // Get all trades
+    // Get all trades for user
     const trades = await prisma.trade.findMany({
+      where: { userId },
       orderBy: { createdAt: 'asc' },
     });
 

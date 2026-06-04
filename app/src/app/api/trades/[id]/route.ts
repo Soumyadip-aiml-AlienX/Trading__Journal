@@ -4,17 +4,23 @@ import { calculateRiskPips, calculateRR, calculatePnlPct } from '@/lib/calculati
 import { startOfDay } from 'date-fns';
 import { sendNotification } from '@/lib/notifications';
 import { TradeInputSchema } from '@/lib/schemas';
+import { getUserFromRequest } from '@/lib/auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const trade = await prisma.trade.findUnique({
       where: { id },
     });
 
-    if (!trade) {
+    if (!trade || trade.userId !== user.id) {
       return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
     }
 
@@ -27,7 +33,21 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await context.params;
+    
+    // Check ownership
+    const existingTrade = await prisma.trade.findUnique({
+      where: { id },
+    });
+    if (!existingTrade || existingTrade.userId !== user.id) {
+      return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
+    }
+
     const bodyRaw = await request.json();
     const result = TradeInputSchema.safeParse(bodyRaw);
     if (!result.success) {
@@ -49,7 +69,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     if (body.exitPrice) {
       // Get settings to know actual risk pct
-      const settings = await prisma.settings.findFirst();
+      const settings = await prisma.settings.findUnique({
+        where: { userId: user.id },
+      });
       const riskPct = settings?.riskPerTrade ?? 1.5;
       
       actualPnlPct = calculatePnlPct(
@@ -111,20 +133,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       if (status === 'closed' && actualPnlPct !== null) {
         const resultEmoji = actualPnlPct >= 0 ? '🏆' : '🚨';
         const notificationMessage = `[MAVEN JOURNAL] ${resultEmoji} Trade Closed: ${trade.tradeCode} (${trade.asset} ${trade.direction}) | Result: ${actualPnlPct >= 0 ? '+' : ''}${actualPnlPct.toFixed(2)}% | Exit Price: ${trade.exitPrice} | Reason: ${trade.exitReason}`;
-        await sendNotification(notificationMessage);
+        await sendNotification(notificationMessage, user.id);
 
         // Check daily drawdown
         const today = new Date();
         const dayStart = startOfDay(today);
         const todayTrades = await prisma.trade.findMany({
           where: {
+            userId: user.id,
             date: { gte: dayStart },
             status: 'closed',
           },
         });
         const dailyPnl = todayTrades.reduce((sum, t) => sum + (t.actualPnlPct ?? 0), 0);
         if (dailyPnl <= -2.0) {
-          await sendNotification(`[MAVEN JOURNAL] ⚠️ DRAWDOWN ALERT: Daily P&L is currently ${dailyPnl.toFixed(2)}%! Please check your daily limits.`);
+          await sendNotification(`[MAVEN JOURNAL] ⚠️ DRAWDOWN ALERT: Daily P&L is currently ${dailyPnl.toFixed(2)}%! Please check your daily limits.`, user.id);
         }
       }
     } catch (err) {
@@ -140,7 +163,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await context.params;
+
+    // Check ownership
+    const existingTrade = await prisma.trade.findUnique({
+      where: { id },
+    });
+    if (!existingTrade || existingTrade.userId !== user.id) {
+      return NextResponse.json({ error: 'Trade not found' }, { status: 404 });
+    }
+
     await prisma.trade.delete({
       where: { id },
     });

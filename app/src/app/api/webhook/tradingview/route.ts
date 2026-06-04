@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
+import { getUserFromRequest } from '@/lib/auth';
 
-// POST: Receive alert from TradingView
+// POST: Receive alert from TradingView (unauthenticated, relies on userId query param)
 export async function POST(request: NextRequest) {
   // Rate limiting: 60 requests per minute per IP
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const { allowed, remaining } = rateLimit(`webhook:${ip}`, { maxRequests: 60, windowMs: 60_000 });
+  const { allowed } = rateLimit(`webhook:${ip}`, { maxRequests: 60, windowMs: 60_000 });
 
   if (!allowed) {
     return NextResponse.json(
@@ -19,6 +20,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing userId parameter' }, { status: 400 });
+    }
+
     const body = await request.json();
     
     // Parse symbol, normalize to uppercase (XAUUSD, BTCUSD, etc.)
@@ -55,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     const alert = await prisma.webhookAlert.create({
       data: {
+        userId,
         ticker,
         action,
         price,
@@ -75,13 +84,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET: Fetch alerts (pending by default, or all if ?all=true)
+// GET: Fetch alerts for the logged-in user
 export async function GET(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const all = searchParams.get('all') === 'true';
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId: user.id };
     if (!all) {
       where.status = 'pending';
     }
@@ -97,15 +111,28 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PATCH: Update alert status (converted, ignored)
+// PATCH: Update alert status for the logged-in user
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const status = searchParams.get('status') || 'converted';
 
     if (!id) {
       return NextResponse.json({ error: 'Alert ID is required' }, { status: 400 });
+    }
+
+    const existingAlert = await prisma.webhookAlert.findUnique({
+      where: { id }
+    });
+
+    if (!existingAlert || existingAlert.userId !== user.id) {
+      return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
     }
 
     const alert = await prisma.webhookAlert.update({

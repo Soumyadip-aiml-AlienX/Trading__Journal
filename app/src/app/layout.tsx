@@ -8,6 +8,7 @@ import { DrawdownProvider } from '@/context/DrawdownContext';
 import LayoutShell from '@/components/layout/LayoutShell';
 import QuickEntryModal from '@/components/shared/QuickEntryModal';
 import KeyboardShortcutHelper from '@/components/shared/KeyboardShortcutHelper';
+import { getUserFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,13 +55,18 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  let settings = null;
-  try {
-    settings = await prisma.settings.findFirst();
-  } catch (err) {
-    console.error('Failed to load settings in layout:', err);
+  const user = await getUserFromRequest();
+  let initialShowOnboarding = false;
+  if (user) {
+    try {
+      const settings = await prisma.settings.findUnique({
+        where: { userId: user.id }
+      });
+      initialShowOnboarding = !settings || !settings.onboardingDone;
+    } catch (err) {
+      console.error('Failed to load settings in layout:', err);
+    }
   }
-  const initialShowOnboarding = !settings || !settings.onboardingDone;
 
   return (
     <html lang="en" className="dark">

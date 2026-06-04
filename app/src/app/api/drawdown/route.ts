@@ -1,27 +1,39 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { startOfDay, endOfDay, subDays, format } from 'date-fns';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const today = new Date();
     const dayStart = startOfDay(today);
     const dayEnd = endOfDay(today);
 
-    // Get today's trades
+    // Get today's trades for current user
     const todayTrades = await prisma.trade.findMany({
       where: {
+        userId: user.id,
         date: { gte: dayStart, lte: dayEnd },
       },
     });
 
-    // Get all closed trades for overall drawdown
+    // Get all closed trades for overall drawdown for current user
     const allTrades = await prisma.trade.findMany({
-      where: { status: 'closed' },
+      where: {
+        userId: user.id,
+        status: 'closed',
+      },
     });
 
-    // Settings
-    const settings = await prisma.settings.findFirst();
+    // Settings for current user
+    const settings = await prisma.settings.findUnique({
+      where: { userId: user.id }
+    });
     const phase = settings?.currentPhase ?? 'Phase 1';
     const maxTrades = settings?.maxTradesPerDay ?? 2;
 
@@ -47,7 +59,10 @@ export async function GET() {
 
     // Trading streak: consecutive calendar days with >= 1 closed trade
     const allTradeDates = await prisma.trade.findMany({
-      where: { status: 'closed' },
+      where: {
+        userId: user.id,
+        status: 'closed',
+      },
       select: { date: true },
       orderBy: { date: 'desc' },
     });

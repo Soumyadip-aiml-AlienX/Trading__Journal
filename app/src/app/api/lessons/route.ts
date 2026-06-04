@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const category = searchParams.get('category');
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId: user.id };
     
     if (category) {
       where.category = category;
@@ -33,6 +39,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     if (!body.content) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
@@ -40,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     const lesson = await prisma.lesson.create({
       data: {
+        userId: user.id,
         date: body.date ? new Date(body.date) : new Date(),
         content: body.content,
         category: body.category || 'Strategy',

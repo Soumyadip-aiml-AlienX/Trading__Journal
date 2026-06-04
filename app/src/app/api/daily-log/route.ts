@@ -4,10 +4,16 @@ import { startOfDay } from 'date-fns';
 import { sendNotification } from '@/lib/notifications';
 import { generateDailySummary } from '@/lib/calculations';
 import { syncToNotion } from '@/lib/notion';
+import { getUserFromRequest } from '@/lib/auth';
 
-// GET - Retrieve daily log for a specific date or a date range
+// GET - Retrieve daily log for a specific date or a date range for the current user
 export async function GET(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const dateParam = searchParams.get('date');
     const dateFrom = searchParams.get('dateFrom');
@@ -16,6 +22,7 @@ export async function GET(request: NextRequest) {
     if (dateFrom || dateTo) {
       const logs = await prisma.dailyLog.findMany({
         where: {
+          userId: user.id,
           date: {
             ...(dateFrom ? { gte: startOfDay(new Date(dateFrom)) } : {}),
             ...(dateTo ? { lte: startOfDay(new Date(dateTo)) } : {}),
@@ -28,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     const date = startOfDay(dateParam ? new Date(dateParam) : new Date());
     const log = await prisma.dailyLog.findUnique({
-      where: { date },
+      where: { date_userId: { date, userId: user.id } },
       include: { trades: true },
     });
 
@@ -39,14 +46,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create daily log (pre-session check-in)
+// POST - Create daily log (pre-session check-in) for the current user
 export async function POST(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const date = startOfDay(new Date(body.date));
 
     const log = await prisma.dailyLog.upsert({
-      where: { date },
+      where: { date_userId: { date, userId: user.id } },
       update: {
         mentalState: body.mentalState,
         physicalState: body.physicalState,
@@ -58,6 +70,7 @@ export async function POST(request: NextRequest) {
         readinessScore: body.readinessScore,
       },
       create: {
+        userId: user.id,
         date,
         mentalState: body.mentalState,
         physicalState: body.physicalState,
@@ -77,14 +90,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH - Update daily log (reflection)
+// PATCH - Update daily log (reflection) for the current user
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const date = startOfDay(new Date(body.date));
 
     // Check if log exists, create minimal one if not
-    const existing = await prisma.dailyLog.findUnique({ where: { date } });
+    const existing = await prisma.dailyLog.findUnique({
+      where: { date_userId: { date, userId: user.id } }
+    });
     if (!existing) {
       return NextResponse.json(
         { error: 'Please complete the pre-session check-in first.' },
@@ -93,7 +113,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const log = await prisma.dailyLog.update({
-      where: { date },
+      where: { date_userId: { date, userId: user.id } },
       data: {
         marketBias: body.marketBias ?? null,
         goldBehaviour: body.goldBehaviour ?? null,
@@ -122,6 +142,7 @@ export async function PATCH(request: NextRequest) {
     if (body.lessonLearned) {
       await prisma.lesson.create({
         data: {
+          userId: user.id,
           date,
           content: body.lessonLearned,
           category: 'Strategy',
@@ -137,6 +158,7 @@ export async function PATCH(request: NextRequest) {
       
       const todayTrades = await prisma.trade.findMany({
         where: {
+          userId: user.id,
           date: {
             gte: date,
             lt: nextDay,
@@ -152,7 +174,7 @@ export async function PATCH(request: NextRequest) {
 
       // Save summary back to DailyLog
       await prisma.dailyLog.update({
-        where: { date },
+        where: { date_userId: { date, userId: user.id } },
         data: { autoSummary: summaryText },
       });
 

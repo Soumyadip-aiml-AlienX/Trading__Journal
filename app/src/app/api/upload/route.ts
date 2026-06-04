@@ -3,9 +3,15 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     

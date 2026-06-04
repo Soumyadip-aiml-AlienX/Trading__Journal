@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { calculateRiskPips, calculateRR, calculatePnlPct, generateTradeCode } from '@/lib/calculations';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getUserFromRequest();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { trades } = await request.json();
     if (!Array.isArray(trades) || trades.length === 0) {
       return NextResponse.json({ error: 'Trades array is required' }, { status: 400 });
@@ -13,13 +19,16 @@ export async function POST(request: NextRequest) {
     
     // Get last trade code to sequence properly
     const lastTrade = await prisma.trade.findFirst({
+      where: { userId: user.id },
       orderBy: { tradeCode: 'desc' },
       select: { tradeCode: true },
     });
     let lastCode = lastTrade?.tradeCode ?? null;
 
     // Get settings to know actual risk pct
-    const settings = await prisma.settings.findFirst();
+    const settings = await prisma.settings.findUnique({
+      where: { userId: user.id }
+    });
     const riskPct = settings?.riskPerTrade ?? 1.5;
 
     for (const t of trades) {
@@ -51,6 +60,7 @@ export async function POST(request: NextRequest) {
 
       const created = await prisma.trade.create({
         data: {
+          userId: user.id,
           tradeCode,
           date: new Date(t.date || new Date()),
           entryTime: new Date(t.entryTime || new Date()),
