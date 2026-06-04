@@ -60,6 +60,15 @@ export default function Sidebar({
     }
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('maven_logged_in');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_login_type');
+    localStorage.removeItem('user_avatar');
+    window.location.href = '/login';
+  };
+
   useEffect(() => {
     if (!data) return;
 
@@ -172,19 +181,30 @@ export default function Sidebar({
           </div>
 
           {(!isCollapsed || isMobileOpen) && (
-            <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-bold text-[var(--color-text-primary)] truncate">
-                {userName}
-              </h4>
-              <p className="text-[10px] text-[var(--color-text-muted)] truncate">
-                {userEmail}
-              </p>
-              {loginType === 'google' && (
-                <div className="flex items-center gap-1.5 mt-1 text-[8px] font-bold text-yellow-500 uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                  <span>Google Cloud Active</span>
-                </div>
-              )}
+            <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-bold text-[var(--color-text-primary)] truncate">
+                  {userName}
+                </h4>
+                <p className="text-[10px] text-[var(--color-text-muted)] truncate">
+                  {userEmail}
+                </p>
+                {loginType === 'google' && (
+                  <div className="flex items-center gap-1.5 mt-1 text-[8px] font-bold text-yellow-500 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                    <span>Google Cloud Active</span>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-xs text-[var(--color-text-muted)] hover:text-red-400 p-1 hover:bg-[var(--color-surface-overlay)] rounded cursor-pointer transition-colors"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                🚪
+              </button>
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import OnboardingWizard from '@/components/shared/OnboardingWizard';
 
 interface OnboardingWrapperProps {
@@ -9,8 +10,9 @@ interface OnboardingWrapperProps {
 
 export default function OnboardingWrapper({ initialShow }: OnboardingWrapperProps) {
   const [show, setShow] = useState(initialShow);
+  const pathname = usePathname();
 
-  if (!show) return null;
+  if (!show || pathname === '/login') return null;
 
   return (
     <OnboardingWizard
