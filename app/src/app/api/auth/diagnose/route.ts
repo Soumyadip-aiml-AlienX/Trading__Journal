@@ -24,11 +24,18 @@ export async function GET() {
     const userCount = await prisma.user.count();
     diagnostics.userTableTest = `Success (Found ${userCount} users)`;
   } catch (error: any) {
+    // Redact password in connection string for security
+    let redactedUrl = 'none';
+    if (process.env.DATABASE_URL) {
+      redactedUrl = process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@');
+    }
+
     diagnostics.error = {
       message: error.message || 'Unknown database error',
       code: error.code,
       meta: error.meta,
-      stack: error.stack?.split('\n').slice(0, 3) // first 3 lines
+      redactedDatabaseUrl: redactedUrl,
+      stack: error.stack?.split('\n') // Full stack trace
     };
   }
 
