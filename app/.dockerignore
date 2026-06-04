@@ -1,0 +1,13 @@
+node_modules
+.next
+dist
+out
+build
+*.db
+*.log
+.env*.local
+Dockerfile
+.dockerignore
+.git
+.gitignore
+README.md

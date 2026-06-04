@@ -1,0 +1,148 @@
+// Maven Trading Journal - Database Schema
+// Using Prisma ORM with SQLite
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Trade {
+  id               String   @id @default(cuid())
+  tradeCode        String   @unique // TRD-001, TRD-002
+  date             DateTime
+  entryTime        DateTime
+  exitTime         DateTime?
+  session          String   // London Open, NY Open, NY Lunch, Late NY
+  challengePhase   String   // Phase 1, Phase 2, Funded
+  asset            String   // XAUUSD, BTCUSD, ETHUSD
+  direction        String   // BUY or SELL
+  setupTypes       String   // JSON array: ["OB", "FVG", "OTE", etc.]
+  entryPrice       Float
+  stopLoss         Float
+  tp1              Float
+  tp2              Float
+  tp3              Float?
+  exitPrice        Float?
+  exitReason       String?  // TP1 Hit, TP2 Hit, TP3 Hit, Stop Loss, Manual Close, Breakeven
+  actualPnlPct     Float?
+  riskPips         Float?   // Auto-calculated
+  rr1              Float?   // Auto-calculated RR to TP1
+  rr2              Float?   // Auto-calculated RR to TP2
+  rr3              Float?   // Auto-calculated RR to TP3
+  checklistScore   Int      // 0-11
+  checklistItems   String   // JSON array of booleans for each of 11 items
+  preReasoning     String
+  postNotes        String?
+  mistakes         String?
+  partialClose     Boolean  @default(false)
+  breakevenMoved   Boolean  @default(false)
+  screenshots      String   @default("[]") // JSON array of file paths
+  emotionBefore    String   // JSON array: ["Confident", "Calm", etc.]
+  emotionAfter     String?  // JSON array
+  disciplineRating Int?     // 1-5 stars
+  wouldRetake      String?  // Yes, No, Maybe
+  revengeTradeFlag Boolean  @default(false)
+  fomoFlag         Boolean  @default(false)
+  followedRules    Boolean  @default(true)
+  brokenRule       String?  // Which rule was broken
+  pressureToTrade  Boolean  @default(false)
+  status           String   @default("open") // open, closed
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  dailyLogDate     DateTime?
+  dailyLog         DailyLog? @relation(fields: [dailyLogDate], references: [date])
+}
+
+model DailyLog {
+  date              DateTime @id
+  mentalState       Int      // 1-10
+  physicalState     String   // Well Rested, Slightly Tired, Fatigued
+  marketConfidence  Int      // 1-10
+  distractionLevel  String   // Fully Focused, Minor Distractions, Significant Distractions
+  sleepQuality      String   // Excellent, Good, Poor
+  personalStress    Boolean  @default(false)
+  stressDetails     String?
+  readinessScore    Float    // Auto-calculated average
+
+  // Daily Reflection fields
+  marketBias        String?  // Strongly Bullish, Bullish, Neutral, Bearish, Strongly Bearish
+  goldBehaviour     String?
+  cryptoBehaviour   String?
+  keyNewsEvents     String?
+  goodDayToTrade    Int?     // 1-5
+
+  strategyRating    Int?     // 1-10
+  setupsWorked      String?  // JSON array
+  setupsFailed      String?  // JSON array
+  sessionActivity   String?  // JSON: per-session ratings
+  obQuality         Int?     // 1-5
+  fvgReliability    Int?     // 1-5
+
+  followedPlan      String?  // Yes, Mostly, No
+  biggestMistake    String?
+  biggestSuccess    String?
+  whatDifferently   String?
+  lessonLearned     String?
+
+  keyLevels         String?
+  expectedBias      String?
+  scheduledNews     String?
+  tomorrowPlan      String?
+  tradingGoals      String?
+
+  autoSummary       String?
+
+  trades            Trade[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Settings {
+  id              Int    @id @default(1)
+  accountSize     Float  @default(100000)
+  currentPhase    String @default("Phase 1")
+  riskPerTrade    Float  @default(1.5)
+  maxTradesPerDay Int    @default(2)
+  webhookUrl      String?
+  screenshotPath  String?
+  googleSheetId   String?
+  notionApiKey    String?
+  discordWebhook  String?
+  telegramToken   String?
+  telegramChatId  String?
+  onboardingDone  Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WebhookAlert {
+  id            String   @id @default(cuid())
+  ticker        String
+  action        String   // buy, sell
+  price         Float
+  stopLoss      Float?
+  tp1           Float?
+  tp2           Float?
+  session       String?
+  setup         String?
+  rawPayload    String   // Full JSON payload
+  status        String   @default("pending") // pending, converted, ignored
+  convertedTradeId String?
+  receivedAt    DateTime @default(now())
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  date        DateTime
+  content     String
+  category    String?  // Strategy, Psychology, Risk, Market
+  tags        String?  // JSON array
+  tradeId     String?  // Optional link to specific trade
+  createdAt   DateTime @default(now())
+}

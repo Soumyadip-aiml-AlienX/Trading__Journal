@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TradingView Chart</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #131722;
+    }
+    #tradingview_widget {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="tradingview_widget"></div>
+
+  <!-- Load the TradingView Widget constructor script asynchronously -->
+  <script async src="https://s3.tradingview.com/tv.js" id="tv-script"></script>
+  <script type="text/javascript">
+    (function() {
+      // Parse parameters from query URL
+      const params = new URLSearchParams(window.location.search);
+      const symbol = params.get('symbol') || 'OANDA:XAUUSD';
+      const theme = params.get('theme') || 'dark';
+      const interval = params.get('interval') || '15';
+      const style = params.get('style') || '1';
+      const locale = params.get('locale') || 'en';
+      const timezone = params.get('timezone') || 'exchange';
+
+      // Set body background to match theme color
+      document.body.style.background = theme === 'dark' ? '#131722' : '#ffffff';
+
+      function initWidget() {
+        if (window.TradingView) {
+          new TradingView.widget({
+            "autosize": true,
+            "symbol": symbol,
+            "interval": interval,
+            "timezone": timezone,
+            "theme": theme,
+            "style": style,
+            "locale": locale,
+            "enable_publishing": false,
+            "hide_side_toolbar": false,
+            "allow_symbol_change": true,
+            "calendar": false,
+            "support_host": "https://www.tradingview.com",
+            "container_id": "tradingview_widget"
+          });
+        } else {
+          showError();
+        }
+      }
+
+      function showError() {
+        console.error("TradingView global constructor (tv.js) was not found.");
+        
+        // Add visual fallback message in case of script load failure
+        const container = document.getElementById("tradingview_widget");
+        if (container) {
+          container.style.display = "flex";
+          container.style.alignItems = "center";
+          container.style.justifyContent = "center";
+          container.style.flexDirection = "column";
+          container.style.color = "#ef4444";
+          container.style.fontFamily = "sans-serif";
+          container.style.fontSize = "14px";
+          container.style.padding = "20px";
+          container.innerHTML = "<h3>Failed to load TradingView.</h3><p style='color:#9ca3af;font-size:12px;margin-top:8px;'>Please check your internet connection or try refreshing the page.</p>";
+        }
+      }
+
+      const script = document.getElementById("tv-script");
+      if (script) {
+        script.addEventListener("load", initWidget);
+        script.addEventListener("error", showError);
+        // In case it's already loaded by browser cache before execution
+        if (window.TradingView) {
+          initWidget();
+        }
+      } else {
+        initWidget();
+      }
+    })();
+  </script>
+</body>
+</html>
