@@ -4,8 +4,8 @@
   "private": true,
   "main": "main.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
+    "dev": "node prisma-prepare.js && prisma generate && next dev",
+    "build": "node prisma-prepare.js && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "electron:start": "electron .",
