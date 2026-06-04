@@ -20,23 +20,34 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Simulate network delay
-    setTimeout(() => {
-      if (email === 'demo@maven.com' && password === 'admin') {
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
         localStorage.setItem('maven_logged_in', 'true');
-        // Add default profile info if not present
-        localStorage.setItem('user_name', 'Prop Trader Pro');
+        localStorage.setItem('user_name', data.userName || 'Prop Trader Pro');
+        localStorage.setItem('user_email', data.email || email);
         window.location.href = '/';
       } else {
-        setError('Invalid email or password. Use demo@maven.com / admin to login.');
+        setError(data.error || 'Invalid credentials.');
         setLoading(false);
       }
-    }, 800);
+    } catch (err) {
+      console.error(err);
+      setError('Connection failure. Please check your network and try again.');
+      setLoading(false);
+    }
   };
 
   if (!mounted) return null;
