@@ -222,33 +222,6 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* Account Type Selector Grid */}
-            <div className="space-y-1.5">
-              <label className="form-label text-[10px] font-bold tracking-wider text-white/50">Account Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'Administrator', label: 'Administrator', dotColor: 'bg-blue-500' },
-                  { id: 'Moderator', label: 'Moderator', dotColor: 'bg-amber-600' },
-                  { id: 'Standard user', label: 'Standard user', dotColor: 'bg-emerald-500' },
-                  { id: 'Viewer', label: 'Viewer', dotColor: 'bg-purple-500' },
-                ].map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => setAccountType(type.id)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer text-left
-                      ${accountType === type.id 
-                        ? 'bg-slate-900/60 border-emerald-500/40 text-white' 
-                        : 'bg-[#14151b] border-white/5 text-slate-400 hover:bg-slate-900/40 hover:border-white/10'
-                      }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${type.dotColor}`} />
-                    <span>{type.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* First Name & Last Name (Side by Side) */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -261,7 +234,8 @@ export default function RegisterPage() {
                     id="first-name"
                     type="text"
                     required
-                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 pl-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                    style={{ paddingLeft: '2.25rem' }}
+                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
                     placeholder="Ada"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
@@ -278,7 +252,8 @@ export default function RegisterPage() {
                     id="last-name"
                     type="text"
                     required
-                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 pl-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                    style={{ paddingLeft: '2.25rem' }}
+                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
                     placeholder="Lovelace"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
@@ -298,7 +273,8 @@ export default function RegisterPage() {
                   id="email-input"
                   type="email"
                   required
-                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 pl-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                  style={{ paddingLeft: '2.25rem' }}
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
                   placeholder="ada@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -318,7 +294,8 @@ export default function RegisterPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   minLength={8}
-                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 px-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                  style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem' }}
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
                   placeholder="Min. 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -345,7 +322,8 @@ export default function RegisterPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   required
                   minLength={8}
-                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 px-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                  style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem' }}
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
                   placeholder="Repeat password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

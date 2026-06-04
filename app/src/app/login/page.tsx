@@ -258,7 +258,8 @@ export default function LoginPage() {
                     id="email-input"
                     type="email"
                     required
-                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 pl-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                    style={{ paddingLeft: '2.25rem' }}
+                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -277,7 +278,8 @@ export default function LoginPage() {
                     id="password-input"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 px-8 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
+                    style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem' }}
+                    className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
