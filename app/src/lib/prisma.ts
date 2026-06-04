@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { PrismaPg } from '@prisma/adapter-pg';
 import path from 'node:path';
 
 const globalForPrisma = globalThis as unknown as {
@@ -9,10 +10,10 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient() {
   const dbUrl = process.env.DATABASE_URL;
   
-  // If PostgreSQL connection string is provided, instantiate native PostgreSQL client
-  // It automatically reads the DATABASE_URL environment variable
+  // If PostgreSQL connection string is provided, use PrismaPg adapter (required in Prisma 7)
   if (dbUrl && (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://'))) {
-    return new PrismaClient();
+    const adapter = new PrismaPg({ connectionString: dbUrl });
+    return new PrismaClient({ adapter });
   }
 
   // Otherwise, use SQLite adapter for local development
@@ -28,3 +29,4 @@ export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export default prisma;
+
