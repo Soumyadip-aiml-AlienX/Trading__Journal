@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import path from 'node:path';
 
 const globalForPrisma = globalThis as unknown as {
@@ -12,7 +13,11 @@ function createPrismaClient() {
   
   // If PostgreSQL connection string is provided, use PrismaPg adapter (required in Prisma 7)
   if (dbUrl && (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://'))) {
-    const adapter = new PrismaPg({ connectionString: dbUrl });
+    const pool = new Pool({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false }
+    });
+    const adapter = new PrismaPg(pool);
     return new PrismaClient({ adapter });
   }
 
