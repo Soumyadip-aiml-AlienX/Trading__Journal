@@ -31,7 +31,12 @@ export default function RegisterPage() {
   const [tempGoogleEmail, setTempGoogleEmail] = useState('');
   const [tempGoogleName, setTempGoogleName] = useState('');
 
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const googleClientId = 
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && 
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID !== 'undefined' && 
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID.trim() !== '' 
+      ? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID 
+      : null;
 
   // JWT Decoder helper
   const decodeJwt = (token: string) => {
@@ -390,7 +395,7 @@ export default function RegisterPage() {
               type="button"
               disabled={loading}
               onClick={() => setShowConfigModal(true)}
-              className="w-full h-10 text-xs font-bold bg-white text-slate-900 hover:bg-slate-100 rounded-lg shadow-md cursor-pointer flex items-center justify-center gap-3 transition-colors border border-slate-200"
+              className="w-full h-11 text-xs font-bold bg-[#14151b] hover:bg-slate-900/60 text-white rounded-lg shadow-md cursor-pointer flex items-center justify-center gap-3 transition-colors border border-white/10"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -436,6 +441,7 @@ export default function RegisterPage() {
             </button>
             
             {/* Google Header Logo */}
+            {/* Google Header Logo */}
             <div className="text-center space-y-1">
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-md mb-2">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -457,84 +463,49 @@ export default function RegisterPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-base font-bold text-white">Choose an account</h3>
-              <p className="text-xs text-[var(--color-text-secondary)]">to continue to Maven Journal</p>
+              <h3 className="text-base font-bold text-white">Sign up with Google</h3>
+              <p className="text-xs text-[var(--color-text-secondary)]">Enter your details to synchronize your trading logs</p>
             </div>
 
-            {/* List of Simulated Google Accounts */}
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {[
-                { email: 'trader.maven@gmail.com', name: 'Maven Prop Trader', avatar: 'M' },
-                { email: 'john.doe@gmail.com', name: 'John Doe', avatar: 'J' },
-                { email: 'prop.trader.pro@gmail.com', name: 'Prop Trader Pro', avatar: 'P' },
-              ].map((acc) => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  onClick={() => {
-                    setShowConfigModal(false);
-                    handleGoogleLoginSuccess(acc.email, acc.name);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-800/60 border border-white/5 hover:border-white/10 text-left transition-all cursor-pointer"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-500/20 to-amber-500/20 text-yellow-500 font-bold flex items-center justify-center text-xs border border-yellow-500/10">
-                    {acc.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-white truncate">{acc.name}</div>
-                    <div className="text-[10px] text-[var(--color-text-secondary)] truncate">{acc.email}</div>
-                  </div>
-                  <span className="text-[10px] text-yellow-500 font-bold">Select</span>
-                </button>
-              ))}
-            </div>
+            {/* Custom Google Sign-In Form */}
+            <div className="space-y-4 pt-2">
+              <div>
+                <label htmlFor="modal-google-email" className="form-label text-[10px] font-bold tracking-wider text-white/50">Google Account Email</label>
+                <input
+                  id="modal-google-email"
+                  type="email"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                  placeholder="e.g., your.name@gmail.com"
+                  value={tempGoogleEmail}
+                  onChange={(e) => setTempGoogleEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="modal-google-name" className="form-label text-[10px] font-bold tracking-wider text-white/50">Account Display Name</label>
+                <input
+                  id="modal-google-name"
+                  type="text"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                  placeholder="e.g., Alex Mercer"
+                  value={tempGoogleName}
+                  onChange={(e) => setTempGoogleName(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={loading || !tempGoogleEmail}
+                onClick={() => {
+                  setShowConfigModal(false);
+                  handleGoogleLoginSuccess(tempGoogleEmail, tempGoogleName || 'Google Trader');
+                }}
+                className="btn-primary w-full h-9 text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 hover:brightness-110 shadow-lg cursor-pointer rounded-lg flex items-center justify-center"
+              >
+                <span>Sign up with Google</span>
+              </button>
 
-            {/* Manual Entry Form */}
-            <div className="border-t border-white/5 pt-4 space-y-3">
-              <details className="group">
-                <summary className="text-[11px] font-bold text-[var(--color-text-muted)] cursor-pointer select-none hover:text-white flex items-center gap-1 group-open:mb-3">
-                  <span>➕</span> Use another account / Custom Google credentials
-                </summary>
-                <div className="space-y-3 pt-1">
-                  <div>
-                    <label htmlFor="modal-google-email" className="form-label">Google Account Email</label>
-                    <input
-                      id="modal-google-email"
-                      type="email"
-                      required
-                      className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
-                      placeholder="e.g., my.custom.account@gmail.com"
-                      value={tempGoogleEmail}
-                      onChange={(e) => setTempGoogleEmail(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="modal-google-name" className="form-label">Account Display Name</label>
-                    <input
-                      id="modal-google-name"
-                      type="text"
-                      required
-                      className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
-                      placeholder="e.g., Alex Mercer"
-                      value={tempGoogleName}
-                      onChange={(e) => setTempGoogleName(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={loading || !tempGoogleEmail}
-                    onClick={() => {
-                      setShowConfigModal(false);
-                      handleGoogleLoginSuccess(tempGoogleEmail, tempGoogleName || 'Google Trader');
-                    }}
-                    className="btn-primary w-full h-9 text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 hover:brightness-110 shadow-lg cursor-pointer rounded-lg flex items-center justify-center"
-                  >
-                    <span>Select & Continue</span>
-                  </button>
-                </div>
-              </details>
-
-              <details className="group">
+              <details className="group pt-2 border-t border-white/5">
                 <summary className="text-[10px] text-[var(--color-text-muted)] hover:text-white cursor-pointer select-none flex items-center gap-1">
                   <span>⚙️</span> Developer instructions (Official Google OAuth)
                 </summary>

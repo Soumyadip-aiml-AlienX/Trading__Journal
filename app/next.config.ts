@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
         { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
         {
           key: 'Content-Security-Policy',
-          value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://s3.tradingview.com https://*.tradingview.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://s3.tradingview.com https://*.tradingview.com; connect-src 'self' https://s3.tradingview.com https://*.tradingview.com; frame-src 'self' https://s3.tradingview.com https://*.tradingview.com;",
+          value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://s3.tradingview.com https://*.tradingview.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://s3.tradingview.com https://*.tradingview.com https://lh3.googleusercontent.com https://*.googleusercontent.com; connect-src 'self' https://s3.tradingview.com https://*.tradingview.com https://accounts.google.com; frame-src 'self' https://s3.tradingview.com https://*.tradingview.com https://accounts.google.com;",
         },
       ],
     },

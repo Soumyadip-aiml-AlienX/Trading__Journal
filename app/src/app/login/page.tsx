@@ -24,7 +24,12 @@ export default function LoginPage() {
   const [tempGoogleEmail, setTempGoogleEmail] = useState('');
   const [tempGoogleName, setTempGoogleName] = useState('');
 
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const googleClientId = 
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && 
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID !== 'undefined' && 
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID.trim() !== '' 
+      ? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID 
+      : null;
 
   // JWT Decoder helper
   const decodeJwt = (token: string) => {
@@ -79,15 +84,12 @@ export default function LoginPage() {
     if (localStorage.getItem('maven_logged_in') === 'true') {
       router.push('/');
     }
+  }, [router]);
 
-    if (!googleClientId) return;
+  useEffect(() => {
+    if (!mounted || !googleClientId) return;
 
-    // Load Google script dynamically
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
+    const initGoogle = () => {
       if (window.google) {
         window.google.accounts.id.initialize({
           client_id: googleClientId,
@@ -100,29 +102,34 @@ export default function LoginPage() {
             }
           },
         });
-        setGoogleInitialized(true);
+
+        const btnContainer = document.getElementById('google-signin-btn-container');
+        if (btnContainer) {
+          window.google.accounts.id.renderButton(
+            btnContainer,
+            { theme: 'outline', size: 'large', type: 'standard', width: 380 }
+          );
+        }
       }
     };
-    document.body.appendChild(script);
 
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, [router, googleClientId]);
+    if (window.google) {
+      initGoogle();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initGoogle;
+      document.body.appendChild(script);
 
-  useEffect(() => {
-    if (googleInitialized && googleClientId) {
-      const btnContainer = document.getElementById('google-signin-btn-container');
-      if (btnContainer && window.google) {
-        window.google.accounts.id.renderButton(
-          btnContainer,
-          { theme: 'outline', size: 'large', type: 'standard', width: 380 }
-        );
-      }
+      return () => {
+        if (document.body.contains(script)) {
+          document.body.removeChild(script);
+        }
+      };
     }
-  }, [googleInitialized, googleClientId]);
+  }, [mounted, googleClientId]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +235,7 @@ export default function LoginPage() {
                       d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.7-2.87c-1.03.69-2.35 1.1-4.26 1.1-3.34 0-5.86-1.81-6.76-4.51l-3.85 2.99C3.37 20.33 7.35 23 12 23z"
                     />
                   </svg>
-                  <span>Google</span>
+                  <span>Continue with Google</span>
                 </button>
               )}
             </div>
@@ -358,84 +365,49 @@ export default function LoginPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-base font-bold text-white">Choose an account</h3>
-              <p className="text-xs text-[var(--color-text-secondary)]">to continue to Maven Journal</p>
+              <h3 className="text-base font-bold text-white">Sign in with Google</h3>
+              <p className="text-xs text-[var(--color-text-secondary)]">Enter your details to synchronize your trading logs</p>
             </div>
 
-            {/* List of Simulated Google Accounts */}
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {[
-                { email: 'trader.maven@gmail.com', name: 'Maven Prop Trader', avatar: 'M' },
-                { email: 'john.doe@gmail.com', name: 'John Doe', avatar: 'J' },
-                { email: 'prop.trader.pro@gmail.com', name: 'Prop Trader Pro', avatar: 'P' },
-              ].map((acc) => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  onClick={() => {
-                    setShowConfigModal(false);
-                    handleGoogleLoginSuccess(acc.email, acc.name);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-800/60 border border-white/5 hover:border-white/10 text-left transition-all cursor-pointer"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-500/20 to-amber-500/20 text-yellow-500 font-bold flex items-center justify-center text-xs border border-yellow-500/10">
-                    {acc.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-white truncate">{acc.name}</div>
-                    <div className="text-[10px] text-[var(--color-text-secondary)] truncate">{acc.email}</div>
-                  </div>
-                  <span className="text-[10px] text-yellow-500 font-bold">Sign In</span>
-                </button>
-              ))}
-            </div>
+            {/* Custom Google Sign-In Form */}
+            <div className="space-y-4 pt-2">
+              <div>
+                <label htmlFor="modal-google-email" className="form-label text-[10px] font-bold tracking-wider text-white/50">Google Account Email</label>
+                <input
+                  id="modal-google-email"
+                  type="email"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                  placeholder="e.g., your.name@gmail.com"
+                  value={tempGoogleEmail}
+                  onChange={(e) => setTempGoogleEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="modal-google-name" className="form-label text-[10px] font-bold tracking-wider text-white/50">Account Display Name</label>
+                <input
+                  id="modal-google-name"
+                  type="text"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                  placeholder="e.g., Alex Mercer"
+                  value={tempGoogleName}
+                  onChange={(e) => setTempGoogleName(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={loading || !tempGoogleEmail}
+                onClick={() => {
+                  setShowConfigModal(false);
+                  handleGoogleLoginSuccess(tempGoogleEmail, tempGoogleName || 'Google Trader');
+                }}
+                className="btn-primary w-full h-9 text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 hover:brightness-110 shadow-lg cursor-pointer rounded-lg flex items-center justify-center"
+              >
+                <span>Sign in with Google</span>
+              </button>
 
-            {/* Manual Entry Form */}
-            <div className="border-t border-white/5 pt-4 space-y-3">
-              <details className="group">
-                <summary className="text-[11px] font-bold text-[var(--color-text-muted)] cursor-pointer select-none hover:text-white flex items-center gap-1 group-open:mb-3">
-                  <span>➕</span> Use another account / Custom Google credentials
-                </summary>
-                <div className="space-y-3 pt-1">
-                  <div>
-                    <label htmlFor="modal-google-email" className="form-label">Google Account Email</label>
-                    <input
-                      id="modal-google-email"
-                      type="email"
-                      required
-                      className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
-                      placeholder="e.g., my.custom.account@gmail.com"
-                      value={tempGoogleEmail}
-                      onChange={(e) => setTempGoogleEmail(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="modal-google-name" className="form-label">Account Display Name</label>
-                    <input
-                      id="modal-google-name"
-                      type="text"
-                      required
-                      className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
-                      placeholder="e.g., Alex Mercer"
-                      value={tempGoogleName}
-                      onChange={(e) => setTempGoogleName(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={loading || !tempGoogleEmail}
-                    onClick={() => {
-                      setShowConfigModal(false);
-                      handleGoogleLoginSuccess(tempGoogleEmail, tempGoogleName || 'Google Trader');
-                    }}
-                    className="btn-primary w-full h-9 text-xs font-bold bg-gradient-to-r from-yellow-500 to-amber-500 text-slate-950 hover:brightness-110 shadow-lg cursor-pointer rounded-lg flex items-center justify-center"
-                  >
-                    <span>Select & Continue</span>
-                  </button>
-                </div>
-              </details>
-
-              <details className="group">
+              <details className="group pt-2 border-t border-white/5">
                 <summary className="text-[10px] text-[var(--color-text-muted)] hover:text-white cursor-pointer select-none flex items-center gap-1">
                   <span>⚙️</span> Developer instructions (Official Google OAuth)
                 </summary>
