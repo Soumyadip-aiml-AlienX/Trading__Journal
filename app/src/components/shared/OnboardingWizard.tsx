@@ -343,15 +343,40 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             <div />
           )}
 
-          {step < 5 ? (
-            <button onClick={nextStep} className="btn-primary text-xs px-5 py-1.5 cursor-pointer">
-              Next
-            </button>
-          ) : (
-            <button onClick={handleSubmit} disabled={saving} className="btn-buy text-xs px-6 py-1.5 cursor-pointer">
-              {saving ? 'Saving...' : 'Finish Setup 🚀'}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {(step === 4 || step === 5) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (step === 4) {
+                    setForm({ ...form, screenshotPath: '' });
+                    nextStep();
+                  } else {
+                    setForm({
+                      ...form,
+                      googleSheetId: '',
+                      notionApiKey: '',
+                      discordWebhook: '',
+                    });
+                    setTimeout(() => handleSubmit(), 0);
+                  }
+                }}
+                className="text-slate-400 hover:text-white text-xs px-2 py-1 transition-colors cursor-pointer"
+              >
+                Skip
+              </button>
+            )}
+
+            {step < 5 ? (
+              <button onClick={nextStep} className="btn-primary text-xs px-5 py-1.5 cursor-pointer">
+                Next
+              </button>
+            ) : (
+              <button onClick={handleSubmit} disabled={saving} className="btn-buy text-xs px-6 py-1.5 cursor-pointer">
+                {saving ? 'Saving...' : 'Finish Setup 🚀'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

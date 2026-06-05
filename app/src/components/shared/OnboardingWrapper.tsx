@@ -12,7 +12,7 @@ export default function OnboardingWrapper({ initialShow }: OnboardingWrapperProp
   const [show, setShow] = useState(initialShow);
   const pathname = usePathname();
 
-  if (!show || pathname === '/login') return null;
+  if (!show || pathname === '/login' || pathname === '/register') return null;
 
   return (
     <OnboardingWizard
