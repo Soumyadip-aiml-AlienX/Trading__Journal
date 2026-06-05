@@ -102,7 +102,8 @@ export default async function RootLayout({
                 const VERCEL_API_HOST = 'https://trading-journal-7aak6mnss-soumyadip-aiml-alienxs-projects.vercel.app';
                 const isCapacitor = window.location.origin.startsWith('file://') || 
                                     window.location.origin.startsWith('capacitor://') ||
-                                    (!window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1'));
+                                    !!window.Capacitor ||
+                                    !!window.nativeInterface;
                 
                 if (isCapacitor) {
                   const originalFetch = window.fetch;
