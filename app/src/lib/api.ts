@@ -3,7 +3,7 @@
  * In a native/mobile application wrapper (e.g. Capacitor, where page origin is file://),
  * relative path fetches will fail. We route them to the live Vercel backend server.
  */
-const VERCEL_API_HOST = 'https://trading-journal-7aak6mnss-soumyadip-aiml-alienxs-projects.vercel.app';
+const VERCEL_API_HOST = 'https://trading-journal-soumyadip-aiml-alienxs-projects.vercel.app';
 
 export function getApiUrl(path: string): string {
   // Check if we are running in a native webview/Capacitor environment

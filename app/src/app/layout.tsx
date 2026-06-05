@@ -99,7 +99,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                const VERCEL_API_HOST = 'https://trading-journal-7aak6mnss-soumyadip-aiml-alienxs-projects.vercel.app';
+                const VERCEL_API_HOST = 'https://trading-journal-soumyadip-aiml-alienxs-projects.vercel.app';
                 const isCapacitor = window.location.origin.startsWith('file://') || 
                                     window.location.origin.startsWith('capacitor://') ||
                                     !!window.Capacitor ||
