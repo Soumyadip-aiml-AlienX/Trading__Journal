@@ -18,8 +18,17 @@ export function middleware(request: NextRequest) {
 
   // Echo the origin if it is allowed
   if (origin) {
-    // Allow localhost (for Android/iOS mobile apps) or same-origin
-    if (origin.startsWith('http://localhost') || origin.startsWith('capacitor://localhost')) {
+    // Allow localhost (http/https), capacitor, file, or null origins for mobile apps
+    const isAllowedLocalOrigin = 
+      origin.startsWith('http://localhost') || 
+      origin.startsWith('https://localhost') || 
+      origin.startsWith('capacitor://localhost') ||
+      origin.startsWith('http://127.0.0.1') ||
+      origin.startsWith('https://127.0.0.1') ||
+      origin.startsWith('file://') ||
+      origin === 'null';
+
+    if (isAllowedLocalOrigin) {
       corsHeaders['Access-Control-Allow-Origin'] = origin;
     }
   }

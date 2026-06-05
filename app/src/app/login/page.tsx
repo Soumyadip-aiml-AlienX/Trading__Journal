@@ -182,9 +182,9 @@ export default function LoginPage() {
         setError(data.error || 'Invalid credentials.');
         setLoading(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Connection failure. Please check your network and try again.');
+      setError(`Connection failure (${err?.message || err}). Please check your network and try again.`);
       setLoading(false);
     }
   };
@@ -218,9 +218,9 @@ export default function LoginPage() {
       } else {
         setResetError(data.error || 'Failed to reset password.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setResetError('Connection failure. Please check your network and try again.');
+      setResetError(`Connection failure (${err?.message || err}). Please check your network and try again.`);
     } finally {
       setResetLoading(false);
     }

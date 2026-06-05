@@ -190,9 +190,9 @@ export default function RegisterPage() {
         setError(data.error || 'Failed to create account.');
         setLoading(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Connection failure. Please check your network and try again.');
+      setError(`Connection failure (${err?.message || err}). Please check your network and try again.`);
       setLoading(false);
     }
   };

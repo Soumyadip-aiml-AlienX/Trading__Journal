@@ -100,7 +100,8 @@ export default async function RootLayout({
             __html: `
               (function() {
                 const VERCEL_API_HOST = 'https://trading-journal-soumyadip-aiml-alienxs-projects.vercel.app';
-                const isCapacitor = window.location.origin.startsWith('file://') || 
+                const isCapacitor = ${process.env.NEXT_PUBLIC_BUILD_MOBILE === 'true'} ||
+                                    window.location.origin.startsWith('file://') || 
                                     window.location.origin.startsWith('capacitor://') ||
                                     (window.location.hostname === 'localhost' && window.location.port !== '3000') ||
                                     !!window.Capacitor ||

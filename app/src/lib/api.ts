@@ -8,12 +8,13 @@ const VERCEL_API_HOST = 'https://trading-journal-soumyadip-aiml-alienxs-projects
 export function getApiUrl(path: string): string {
   // Check if we are running in a native webview/Capacitor environment
   const isCapacitor = 
-    typeof window !== 'undefined' && 
-    (window.location.origin.startsWith('file://') || 
-     window.location.origin.startsWith('capacitor://') ||
-     (window.location.hostname === 'localhost' && window.location.port !== '3000') ||
-     !!(window as any).Capacitor ||
-     !!(window as any).nativeInterface);
+    process.env.NEXT_PUBLIC_BUILD_MOBILE === 'true' ||
+    (typeof window !== 'undefined' && 
+     (window.location.origin.startsWith('file://') || 
+      window.location.origin.startsWith('capacitor://') ||
+      (window.location.hostname === 'localhost' && window.location.port !== '3000') ||
+      !!(window as any).Capacitor ||
+      !!(window as any).nativeInterface));
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
