@@ -50,7 +50,7 @@ export default function ChartsPage() {
       className={`flex flex-col transition-all duration-300 relative ${
         isFullscreen
           ? 'fixed inset-0 z-[999] bg-[#0a0a0c] p-0 m-0 w-full h-full' 
-          : 'h-[calc(100vh-120px)] space-y-4'
+          : 'h-[calc(100vh-135px)] space-y-3'
       }`}
     >
       {/* Floating Exit Button in Fullscreen Mode */}
@@ -63,33 +63,33 @@ export default function ChartsPage() {
         </button>
       )}
 
-      {/* Header toolbar */}
+      {/* Header toolbar with unified glass design */}
       {!isFullscreen && (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 rounded-xl glass-card bg-[var(--color-surface)]/65 border border-[var(--color-border)] shadow-md">
+          <div className="space-y-0.5">
+            <h1 className="text-sm font-bold flex items-center gap-2 text-[var(--color-text-primary)]">
               📈 Interactive Charts
             </h1>
-            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+            <p className="text-[10px] text-[var(--color-text-muted)]">
               Analyze live market price actions and indicators using advanced charting tools.
             </p>
             {mounted && loginType === 'google' && (
-              <p className="text-[10px] text-yellow-500 font-bold mt-1 flex items-center gap-1.5 uppercase tracking-wider">
+              <p className="text-[9px] text-yellow-500 font-bold mt-1.5 flex items-center gap-1.5 uppercase tracking-wider">
                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
                 <span>Workspace Sync Active — Connected to Google Account ({userEmail})</span>
               </p>
             )}
           </div>
 
-          {/* Toolbar Controls */}
+          {/* Toolbar Controls with matching heights and paddings */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Asset Switcher */}
-            <div className="flex bg-[var(--color-navy)] rounded-lg p-0.5 border border-[var(--color-border)]">
+            <div className="flex bg-[var(--color-navy)] rounded-lg p-0.5 border border-[var(--color-border)] h-8 items-center">
               {SYMBOLS.map((s) => (
                 <button
                   key={s.value}
                   onClick={() => setSymbol(s.value)}
-                  className={`text-[10px] font-bold px-3 py-1.5 rounded transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`text-[10px] font-bold px-3 py-1 rounded transition-all cursor-pointer flex items-center gap-1 h-full ${
                     symbol === s.value
                       ? 'bg-[var(--color-accent)] text-white shadow-md'
                       : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -106,7 +106,7 @@ export default function ChartsPage() {
               href={getTradingViewUrl(symbol)}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-[10px] py-1.5 px-3 flex items-center gap-1.5 hover:text-[var(--color-accent-light)] border border-[var(--color-border)] rounded-lg transition-all hover:border-[var(--color-accent)]"
+              className="bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] font-bold text-[10px] px-3 flex items-center gap-1.5 border border-[var(--color-border)] hover:border-[var(--color-accent)] rounded-lg transition-all cursor-pointer hover:text-[var(--color-accent-light)] shadow-sm h-8"
             >
               <span>↗️</span> Open in TradingView
             </a>
@@ -114,7 +114,7 @@ export default function ChartsPage() {
             {/* Native Fullscreen Button */}
             <button
               onClick={toggleFullscreen}
-              className="text-[10px] font-bold py-1.5 px-4 flex items-center gap-1.5 rounded-lg transition-all cursor-pointer btn-primary"
+              className="bg-gradient-to-r from-[var(--color-accent)] to-[#2563EB] hover:brightness-110 text-white font-bold text-[10px] px-4 flex items-center gap-1.5 border border-transparent rounded-lg transition-all cursor-pointer shadow-md h-8"
             >
               <span>📺</span> Fullscreen
             </button>

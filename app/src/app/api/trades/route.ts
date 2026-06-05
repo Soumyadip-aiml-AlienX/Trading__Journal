@@ -10,6 +10,7 @@ import { sendNotification } from '@/lib/notifications';
 import { TradeInputSchema } from '@/lib/schemas';
 import { rateLimit } from '@/lib/rate-limit';
 import { getUserFromRequest } from '@/lib/auth';
+import { syncToGoogleSheets } from '@/lib/google-sheets';
 
 // GET all trades for current user
 export async function GET(request: NextRequest) {
@@ -168,6 +169,15 @@ export async function POST(request: NextRequest) {
       await sendNotification(notificationMessage, user.id);
     } catch (err) {
       console.error('Failed to send entry notification:', err);
+    }
+
+    // Auto-sync to Google Sheets in background
+    try {
+      syncToGoogleSheets(user.id).catch((err) => {
+        console.error('Background Google Sheets sync error:', err);
+      });
+    } catch (err) {
+      console.error('Google Sheets sync trigger error:', err);
     }
 
     return NextResponse.json(trade, { status: 201 });

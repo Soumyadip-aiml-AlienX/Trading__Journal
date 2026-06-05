@@ -5,6 +5,7 @@ import { startOfDay } from 'date-fns';
 import { sendNotification } from '@/lib/notifications';
 import { TradeInputSchema } from '@/lib/schemas';
 import { getUserFromRequest } from '@/lib/auth';
+import { syncToGoogleSheets } from '@/lib/google-sheets';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -154,6 +155,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       console.error('Failed to send exit notification:', err);
     }
 
+    // Auto-sync to Google Sheets in background
+    try {
+      syncToGoogleSheets(user.id).catch((err) => {
+        console.error('Background Google Sheets sync error:', err);
+      });
+    } catch (err) {
+      console.error('Google Sheets sync trigger error:', err);
+    }
+
     return NextResponse.json(trade);
   } catch (error) {
     console.error('Trade PUT error:', error);
@@ -181,6 +191,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     await prisma.trade.delete({
       where: { id },
     });
+
+    // Auto-sync to Google Sheets in background
+    try {
+      syncToGoogleSheets(user.id).catch((err) => {
+        console.error('Background Google Sheets sync error:', err);
+      });
+    } catch (err) {
+      console.error('Google Sheets sync trigger error:', err);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
