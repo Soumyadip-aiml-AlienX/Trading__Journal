@@ -115,13 +115,15 @@ export default function Sidebar({
           isCollapsed ? 'justify-center' : 'justify-between'
         }`}>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-phase2)] flex items-center justify-center text-white font-bold text-sm">
-              MJ
-            </div>
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-9 h-9 min-w-[36px] min-h-[36px] object-contain"
+            />
             {(!isCollapsed || isMobileOpen) && (
               <div className="max-md:block">
                 <h1 className="text-sm font-bold text-[var(--color-text-primary)] leading-tight">
-                  Maven Journal
+                  AlienX Journal
                 </h1>
                 <p className="text-[10px] text-[var(--color-text-muted)] font-medium tracking-wider uppercase">
                   SMC + ICT Hybrid

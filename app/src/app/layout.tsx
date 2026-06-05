@@ -27,23 +27,23 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('http://localhost:3000'),
   title: {
-    default: 'Maven Trading Journal | SMC + ICT Hybrid',
-    template: '%s | Maven Trading Journal',
+    default: 'AlienX Trading Journal | SMC + ICT Hybrid',
+    template: '%s | AlienX Trading Journal',
   },
   description:
-    'Professional-grade trading journal for Maven Prop Firm. Track trades, analyze performance, monitor risk, and export daily PDFs with TradingView integration.',
+    'Professional-grade trading journal for AlienX. Track trades, analyze performance, monitor risk, and export daily PDFs with TradingView integration.',
   keywords: ['trading journal', 'prop firm', 'SMC', 'ICT', 'forex', 'trading log', 'risk management'],
   openGraph: {
-    title: 'Maven Trading Journal',
-    description: 'Professional-grade trading journal for prop firm traders. Track, analyze, and optimize your trading performance.',
+    title: 'AlienX Trading Journal',
+    description: 'Professional-grade trading journal for traders. Track, analyze, and optimize your trading performance.',
     type: 'website',
     locale: 'en_US',
-    siteName: 'Maven Trading Journal',
+    siteName: 'AlienX Trading Journal',
   },
   twitter: {
     card: 'summary',
-    title: 'Maven Trading Journal',
-    description: 'Professional-grade trading journal for prop firm traders.',
+    title: 'AlienX Trading Journal',
+    description: 'Professional-grade trading journal for traders.',
   },
   icons: {
     icon: '/favicon.ico',

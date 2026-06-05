@@ -219,12 +219,14 @@ export default function LoginPage() {
 
       <div className="w-full max-w-lg relative z-10 my-8">
         {/* Animated Brand Logo / Title */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-yellow-500 to-amber-500 shadow-lg shadow-yellow-500/20 mb-3 border border-yellow-400/20">
-            <span className="text-2xl" role="img" aria-label="maven-logo">⚡</span>
-          </div>
+        <div className="text-center mb-6 flex flex-col items-center">
+          <img
+            src="/logo.png"
+            alt="AlienX Journal Logo"
+            className="w-24 h-24 object-contain mb-1"
+          />
           <h1 className="text-xl font-bold tracking-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            Maven Journal
+            AlienX Journal
           </h1>
           <p className="text-[10px] text-[var(--color-text-muted)] mt-1 font-medium">
             SMC & ICT Hybrid Trading Analytics Console
