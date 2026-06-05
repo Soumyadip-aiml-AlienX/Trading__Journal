@@ -54,7 +54,7 @@
   },
   "build": {
     "appId": "com.maven.tradingjournal",
-    "productName": "Maven Trading Journal",
+    "productName": "AlienX Journal",
     "npmRebuild": false,
     "directories": {
       "output": "dist"
