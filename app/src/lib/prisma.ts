@@ -63,8 +63,9 @@ function createPrismaClient() {
   
   // If PostgreSQL connection string is provided, use PrismaPg adapter (required in Prisma 7)
   if (dbUrl && (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://'))) {
+    const cleanDbUrl = dbUrl.replace(/[?&]sslmode=[^&]*/g, '');
     const pool = new Pool({
-      connectionString: dbUrl,
+      connectionString: cleanDbUrl,
       ssl: { rejectUnauthorized: false }
     });
     const adapter = new PrismaPg(pool);
