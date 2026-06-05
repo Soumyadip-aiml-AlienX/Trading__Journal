@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
+import { supabase } from './supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'maven_super_secure_secret_2026';
 
@@ -62,6 +63,17 @@ export async function getUserFromRequest(): Promise<{ id: string; email: string 
   const token = cookieStore.get('maven_session')?.value;
   if (!token) return null;
   
+  // 1. Try to verify via Supabase Auth
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (!error && user) {
+      return { id: user.id, email: user.email || '' };
+    }
+  } catch (err) {
+    console.error('Supabase token verification failed, trying fallback:', err);
+  }
+
+  // 2. Fallback to custom JWT
   const payload = verifyToken(token);
   if (!payload) return null;
   

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { hashPassword, generateToken } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
@@ -13,27 +13,37 @@ export async function POST(request: Request) {
     // Normalize email
     const cleanEmail = email.toLowerCase().trim();
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: cleanEmail }
+    // 1. Sign up user via Supabase Auth
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password: password,
     });
 
-    if (existingUser) {
-      return NextResponse.json({ error: 'An account with this email already exists.' }, { status: 409 });
+    if (signUpError) {
+      return NextResponse.json({ error: signUpError.message }, { status: signUpError.status || 400 });
     }
 
-    // Create user
-    const hashedPassword = hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
+    const supabaseUser = signUpData.user;
+    if (!supabaseUser) {
+      return NextResponse.json({ error: 'Failed to create account.' }, { status: 500 });
+    }
+
+    // 2. Synchronize/save user record in the local Prisma DB
+    // Use upsert to handle case where user record might already exist
+    const user = await prisma.user.upsert({
+      where: { email: cleanEmail },
+      update: {
         name: name || 'Trader',
+      },
+      create: {
+        id: supabaseUser.id, // Synchronize the ID with Supabase Auth UUID
         email: cleanEmail,
-        password: hashedPassword
-      }
+        name: name || 'Trader',
+      },
     });
 
-    // Create session token
-    const token = generateToken(user.id, user.email);
+    // 3. Extract the access token for session management
+    const accessToken = signUpData.session?.access_token || '';
 
     // Set cookie response
     const response = NextResponse.json({
@@ -41,13 +51,15 @@ export async function POST(request: Request) {
       user: { id: user.id, email: user.email, name: user.name }
     });
 
-    response.cookies.set('maven_session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/'
-    });
+    if (accessToken) {
+      response.cookies.set('maven_session', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/'
+      });
+    }
 
     return response;
   } catch (error) {

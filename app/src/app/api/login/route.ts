@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { hashPassword, generateToken } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
@@ -12,23 +12,34 @@ export async function POST(request: Request) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: cleanEmail }
+    // 1. Sign in via Supabase Auth
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password: password,
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
+    if (signInError) {
+      return NextResponse.json({ error: signInError.message }, { status: signInError.status || 401 });
     }
 
-    // Verify password
-    const hashedPassword = hashPassword(password);
-    if (user.password !== hashedPassword) {
-      return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
+    const supabaseUser = signInData.user;
+    if (!supabaseUser) {
+      return NextResponse.json({ error: 'Authentication succeeded but no user data returned.' }, { status: 500 });
     }
 
-    // Generate token
-    const token = generateToken(user.id, user.email);
+    // 2. Find or create the user in the local Prisma DB
+    const user = await prisma.user.upsert({
+      where: { email: cleanEmail },
+      update: {},
+      create: {
+        id: supabaseUser.id, // Keep the same UUID!
+        email: cleanEmail,
+        name: supabaseUser.user_metadata?.name || 'Trader',
+      },
+    });
+
+    // 3. Extract access token
+    const accessToken = signInData.session?.access_token || '';
 
     // Set cookie
     const response = NextResponse.json({
@@ -36,13 +47,15 @@ export async function POST(request: Request) {
       user: { id: user.id, email: user.email, name: user.name }
     });
 
-    response.cookies.set('maven_session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/'
-    });
+    if (accessToken) {
+      response.cookies.set('maven_session', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/'
+      });
+    }
 
     return response;
   } catch (error) {

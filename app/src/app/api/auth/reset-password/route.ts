@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { hashPassword } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
@@ -37,12 +37,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash and update password
-    const hashedPassword = hashPassword(newPassword);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashedPassword }
+    // Update password in Supabase using the admin API
+    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+      password: newPassword,
     });
+
+    if (updateError) {
+      console.error('Supabase admin password update failed:', updateError);
+      return NextResponse.json(
+        { error: `Password update failed: ${updateError.message}. Ensure SUPABASE_SERVICE_ROLE_KEY is configured in .env.local` },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
