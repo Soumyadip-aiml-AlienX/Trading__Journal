@@ -11,7 +11,8 @@ export function getApiUrl(path: string): string {
     typeof window !== 'undefined' && 
     (window.location.origin.startsWith('file://') || 
      window.location.origin.startsWith('capacitor://') ||
-     window.location.origin.includes('localhost') === false && window.location.origin.includes('127.0.0.1') === false && window.location.origin.startsWith('http://localhost') === false);
+     !!(window as any).Capacitor ||
+     !!(window as any).nativeInterface);
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
