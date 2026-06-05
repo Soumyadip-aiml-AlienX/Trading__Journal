@@ -90,10 +90,25 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
-    // If already logged in, redirect to home
-    if (localStorage.getItem('maven_logged_in') === 'true') {
-      router.push('/');
-    }
+    // Verify if actually logged in before redirecting
+    const verifySession = async () => {
+      if (localStorage.getItem('maven_logged_in') === 'true') {
+        try {
+          const res = await fetch('/api/auth/me');
+          const data = await res.json();
+          if (res.ok && data.authenticated) {
+            router.push('/');
+          } else {
+            localStorage.removeItem('maven_logged_in');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+          }
+        } catch {
+          localStorage.removeItem('maven_logged_in');
+        }
+      }
+    };
+    verifySession();
   }, [router]);
 
   useEffect(() => {
