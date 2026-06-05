@@ -50,7 +50,7 @@ export default function ChartsPage() {
       className={`flex flex-col transition-all duration-300 relative ${
         isFullscreen
           ? 'fixed inset-0 z-[999] bg-[#0a0a0c] p-0 m-0 w-full h-full' 
-          : 'h-[calc(100vh-135px)] space-y-3'
+          : 'h-[calc(100vh-110px)] space-y-1.5'
       }`}
     >
       {/* Floating Exit Button in Fullscreen Mode */}
@@ -62,61 +62,57 @@ export default function ChartsPage() {
           <span>📺</span> Exit Fullscreen (Esc)
         </button>
       )}
-
+ 
       {/* Header toolbar with unified glass design */}
       {!isFullscreen && (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 rounded-xl glass-card bg-[var(--color-surface)]/65 border border-[var(--color-border)] shadow-md">
-          <div className="space-y-0.5">
-            <h1 className="text-sm font-bold flex items-center gap-2 text-[var(--color-text-primary)]">
+        <div className="flex items-center justify-between gap-2 py-1 px-2.5 rounded-md glass-card bg-[var(--color-surface)]/65 border border-[var(--color-border)] shadow-sm min-h-[36px]">
+          <div className="flex items-center gap-2">
+            <h1 className="text-[11px] font-bold flex items-center gap-1 text-[var(--color-text-primary)]">
               📈 Interactive Charts
             </h1>
-            <p className="text-[10px] text-[var(--color-text-muted)]">
-              Analyze live market price actions and indicators using advanced charting tools.
-            </p>
             {mounted && loginType === 'google' && (
-              <p className="text-[9px] text-yellow-500 font-bold mt-1.5 flex items-center gap-1.5 uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                <span>Workspace Sync Active — Connected to Google Account ({userEmail})</span>
-              </p>
+              <span className="text-[8px] text-yellow-500 font-bold bg-yellow-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider hidden xs:inline-block">
+                Sync Active
+              </span>
             )}
           </div>
-
+ 
           {/* Toolbar Controls with matching heights and paddings */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
             {/* Asset Switcher */}
-            <div className="flex bg-[var(--color-navy)] rounded-lg p-0.5 border border-[var(--color-border)] h-8 items-center">
+            <div className="flex bg-[var(--color-navy)] rounded-md p-0.5 border border-[var(--color-border)] h-6 items-center">
               {SYMBOLS.map((s) => (
                 <button
                   key={s.value}
                   onClick={() => setSymbol(s.value)}
-                  className={`text-[10px] font-bold px-3 py-1 rounded transition-all cursor-pointer flex items-center gap-1 h-full ${
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded transition-all cursor-pointer flex items-center gap-1 h-full ${
                     symbol === s.value
                       ? 'bg-[var(--color-accent)] text-white shadow-md'
                       : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
                   <span>{s.emoji}</span>
-                  {s.value}
+                  <span className="hidden xxs:inline">{s.value}</span>
                 </button>
               ))}
             </div>
-
+ 
             {/* Open in TradingView (external) */}
             <a
               href={getTradingViewUrl(symbol)}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] font-bold text-[10px] px-3 flex items-center gap-1.5 border border-[var(--color-border)] hover:border-[var(--color-accent)] rounded-lg transition-all cursor-pointer hover:text-[var(--color-accent-light)] shadow-sm h-8"
+              className="bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-overlay)] text-[var(--color-text-primary)] font-bold text-[9px] px-2 flex items-center gap-1 border border-[var(--color-border)] hover:border-[var(--color-accent)] rounded-md transition-all cursor-pointer hover:text-[var(--color-accent-light)] shadow-sm h-6"
             >
-              <span>↗️</span> Open in TradingView
+              <span>↗️</span> <span className="hidden xs:inline">TradingView</span>
             </a>
-
+ 
             {/* Native Fullscreen Button */}
             <button
               onClick={toggleFullscreen}
-              className="bg-gradient-to-r from-[var(--color-accent)] to-[#2563EB] hover:brightness-110 text-white font-bold text-[10px] px-4 flex items-center gap-1.5 border border-transparent rounded-lg transition-all cursor-pointer shadow-md h-8"
+              className="bg-gradient-to-r from-[var(--color-accent)] to-[#2563EB] hover:brightness-110 text-white font-bold text-[9px] px-2.5 flex items-center gap-1 border border-transparent rounded-md transition-all cursor-pointer shadow-md h-6"
             >
-              <span>📺</span> Fullscreen
+              <span>📺</span> <span>Fullscreen</span>
             </button>
           </div>
         </div>
