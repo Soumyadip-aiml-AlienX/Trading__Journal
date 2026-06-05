@@ -24,6 +24,16 @@ export default function LoginPage() {
   const [tempGoogleEmail, setTempGoogleEmail] = useState('');
   const [tempGoogleName, setTempGoogleName] = useState('');
 
+  // Password reset state variables
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetName, setResetName] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+
+
   const googleClientId = 
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && 
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID !== 'undefined' && 
@@ -160,6 +170,44 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError(null);
+    setResetSuccess(null);
+
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          name: resetName,
+          newPassword: resetNewPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setResetSuccess('Password reset successfully! You can now sign in.');
+        setResetEmail('');
+        setResetName('');
+        setResetNewPassword('');
+        // Autofill login email
+        setEmail(resetEmail);
+      } else {
+        setResetError(data.error || 'Failed to reset password.');
+      }
+    } catch (err) {
+      console.error(err);
+      setResetError('Connection failure. Please check your network and try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
 
   if (!mounted) return null;
 
@@ -300,10 +348,18 @@ export default function LoginPage() {
                   </button>
                 </div>
                 <div className="text-right mt-1.5">
-                  <span className="text-[10px] text-slate-400 hover:text-white hover:underline cursor-pointer">
+                  <span
+                    onClick={() => {
+                      setShowResetModal(true);
+                      setResetError(null);
+                      setResetSuccess(null);
+                    }}
+                    className="text-[10px] text-slate-400 hover:text-white hover:underline cursor-pointer"
+                  >
                     Forgot password?
                   </span>
                 </div>
+
               </div>
 
               {/* Submit Button */}
@@ -424,6 +480,97 @@ export default function LoginPage() {
           </div>
         </div>
       )}
+
+      {/* Forgot Password Reset Dialog */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="glass-card max-w-md w-full p-6 space-y-5 border border-yellow-500/20 shadow-2xl relative bg-[#0f1015]">
+            <button
+              onClick={() => setShowResetModal(false)}
+              className="absolute top-4 right-4 text-xs text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-surface-overlay)] p-1 rounded cursor-pointer"
+              title="Close modal"
+            >
+              ✕
+            </button>
+            
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-yellow-500/10 shadow-md mb-2">
+                <span className="text-xl">🔑</span>
+              </div>
+              <h3 className="text-base font-bold text-white">Reset Password</h3>
+              <p className="text-xs text-[var(--color-text-secondary)]">Verify your email and display name to set a new password</p>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              {resetError && (
+                <div className="p-3 rounded-lg bg-red-950/40 border border-red-500/20 text-red-400 text-xs font-medium leading-relaxed">
+                  ⚠️ {resetError}
+                </div>
+              )}
+              {resetSuccess && (
+                <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 text-xs font-medium leading-relaxed">
+                  ✅ {resetSuccess}
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="reset-email" className="form-label text-[10px] font-bold tracking-wider text-white/50">Registered Email Address</label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                  placeholder="you@company.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="reset-name" className="form-label text-[10px] font-bold tracking-wider text-white/50">Account Display Name</label>
+                <input
+                  id="reset-name"
+                  type="text"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                  placeholder="e.g., Alex Mercer"
+                  value={resetName}
+                  onChange={(e) => setResetName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="reset-password" className="form-label text-[10px] font-bold tracking-wider text-white/50">New Password</label>
+                <input
+                  id="reset-password"
+                  type="password"
+                  required
+                  className="form-input w-full bg-slate-950/50 border-white/10 text-xs h-9 rounded-lg"
+                  placeholder="••••••••"
+                  value={resetNewPassword}
+                  onChange={(e) => setResetNewPassword(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full h-9 text-xs font-bold bg-[#10b981] hover:bg-[#059669] text-white shadow-lg cursor-pointer rounded-lg flex items-center justify-center gap-2"
+              >
+                {resetLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Resetting...</span>
+                  </>
+                ) : (
+                  <span>Reset Password</span>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
