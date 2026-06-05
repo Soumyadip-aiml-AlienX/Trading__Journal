@@ -172,8 +172,11 @@ export default function LoginPage() {
 
       if (res.ok && data.success) {
         localStorage.setItem('maven_logged_in', 'true');
-        localStorage.setItem('user_name', data.userName || 'Prop Trader Pro');
-        localStorage.setItem('user_email', data.email || email);
+        localStorage.setItem('user_name', data.user?.name || data.userName || 'Prop Trader Pro');
+        localStorage.setItem('user_email', data.user?.email || data.email || email);
+        if (data.token) {
+          localStorage.setItem('maven_session_token', data.token);
+        }
         window.location.href = '/';
       } else {
         setError(data.error || 'Invalid credentials.');

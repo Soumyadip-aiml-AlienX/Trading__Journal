@@ -102,14 +102,58 @@ export default async function RootLayout({
                 const VERCEL_API_HOST = 'https://trading-journal-soumyadip-aiml-alienxs-projects.vercel.app';
                 const isCapacitor = window.location.origin.startsWith('file://') || 
                                     window.location.origin.startsWith('capacitor://') ||
+                                    (window.location.hostname === 'localhost' && window.location.port !== '3000') ||
                                     !!window.Capacitor ||
                                     !!window.nativeInterface;
                 
                 if (isCapacitor) {
                   const originalFetch = window.fetch;
                   window.fetch = function(input, init) {
-                    if (typeof input === 'string' && input.startsWith('/api/')) {
-                      return originalFetch(VERCEL_API_HOST + input, init);
+                    let urlStr = '';
+                    if (typeof input === 'string') {
+                      urlStr = input;
+                    } else if (input && typeof input === 'object' && typeof input.url === 'string') {
+                      urlStr = input.url;
+                    } else if (input && typeof input.toString === 'function') {
+                      urlStr = input.toString();
+                    }
+
+                    if (urlStr.startsWith('/api/') || urlStr.startsWith(window.location.origin + '/api/')) {
+                      const path = urlStr.replace(window.location.origin, '');
+                      const targetUrl = VERCEL_API_HOST + path;
+                      
+                      const token = localStorage.getItem('maven_session_token');
+                      let fetchInit = init || {};
+                      if (token) {
+                        const headers = new Headers(fetchInit.headers || {});
+                        if (!headers.has('Authorization')) {
+                          headers.set('Authorization', 'Bearer ' + token);
+                        }
+                        fetchInit = { ...fetchInit, headers: headers };
+                      }
+
+                      if (typeof input === 'string') {
+                        return originalFetch(targetUrl, fetchInit);
+                      } else {
+                        try {
+                          const req = new Request(targetUrl, {
+                            method: input.method || 'GET',
+                            headers: fetchInit.headers || input.headers,
+                            body: input.body,
+                            mode: input.mode,
+                            credentials: input.credentials,
+                            cache: input.cache,
+                            redirect: input.redirect,
+                            referrer: input.referrer,
+                            integrity: input.integrity,
+                            keepalive: input.keepalive,
+                            signal: input.signal
+                          });
+                          return originalFetch(req);
+                        } catch (e) {
+                          return originalFetch(targetUrl, fetchInit);
+                        }
+                      }
                     }
                     return originalFetch(input, init);
                   };

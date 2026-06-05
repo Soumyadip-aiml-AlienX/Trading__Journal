@@ -182,6 +182,9 @@ export default function RegisterPage() {
         localStorage.setItem('user_name', data.user.name || 'Prop Trader Pro');
         localStorage.setItem('user_email', data.user.email || email);
         localStorage.setItem('user_role', accountType);
+        if (data.token) {
+          localStorage.setItem('maven_session_token', data.token);
+        }
         window.location.href = '/';
       } else {
         setError(data.error || 'Failed to create account.');

@@ -57,10 +57,32 @@ export function verifyToken(token: string): TokenPayload | null {
   }
 }
 
-// Extract authenticated user from request cookie (Server side)
+// Extract authenticated user from request cookie or Authorization header (Server side)
 export async function getUserFromRequest(): Promise<{ id: string; email: string } | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('maven_session')?.value;
+  let token = '';
+
+  // 1. Try to extract token from Authorization header (Bearer token)
+  try {
+    const { headers } = await import('next/headers');
+    const headersList = await headers();
+    const authHeader = headersList.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    }
+  } catch (err) {
+    console.error('Failed to read Authorization header:', err);
+  }
+
+  // 2. Fallback to cookie
+  if (!token) {
+    try {
+      const cookieStore = await cookies();
+      token = cookieStore.get('maven_session')?.value || '';
+    } catch (err) {
+      console.error('Failed to read cookies:', err);
+    }
+  }
+
   if (!token) return null;
   
   // 1. Try to verify via Supabase Auth

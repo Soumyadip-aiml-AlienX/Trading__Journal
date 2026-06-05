@@ -11,6 +11,7 @@ export function getApiUrl(path: string): string {
     typeof window !== 'undefined' && 
     (window.location.origin.startsWith('file://') || 
      window.location.origin.startsWith('capacitor://') ||
+     (window.location.hostname === 'localhost' && window.location.port !== '3000') ||
      !!(window as any).Capacitor ||
      !!(window as any).nativeInterface);
 
