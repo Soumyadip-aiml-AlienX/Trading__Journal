@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: process.env.BUILD_MOBILE === 'true' ? 'export' : 'standalone',
   poweredByHeader: false,
   compress: true,
   images: {
+    unoptimized: process.env.BUILD_MOBILE === 'true',
     formats: ['image/avif', 'image/webp'],
   },
   headers: async () => [

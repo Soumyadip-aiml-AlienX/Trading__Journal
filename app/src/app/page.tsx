@@ -209,7 +209,7 @@ export default function Dashboard() {
                     }
                   >
                     <td className="font-mono font-semibold text-[var(--color-accent-light)] hover:underline">
-                      <Link href={`/trades/${trade.id}`}>
+                      <Link href={`/trades/detail?id=${trade.id}`}>
                         {trade.tradeCode}
                       </Link>
                     </td>

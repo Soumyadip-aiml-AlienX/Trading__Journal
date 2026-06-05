@@ -228,7 +228,7 @@ export default function LessonsDatabasePage() {
 
               {lesson.tradeId && (
                 <a
-                  href={`/trades/${lesson.tradeId}`}
+                  href={`/trades/detail?id=${lesson.tradeId}`}
                   className="text-[10px] text-[var(--color-accent-light)] hover:underline whitespace-nowrap bg-blue-950/20 px-2 py-1 rounded border border-blue-900/30"
                 >
                   View Trade ↗

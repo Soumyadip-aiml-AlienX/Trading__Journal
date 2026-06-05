@@ -138,7 +138,7 @@ export default function QuickEntryModal() {
         // Redirect to trade details page to fill remaining data
         const createdTrade = await res.json();
         toast.success('Quick trade draft created!');
-        router.push(`/trades/${createdTrade.id}`);
+        router.push(`/trades/detail?id=${createdTrade.id}`);
       } else {
         toast.error('Failed to save quick trade.');
       }
