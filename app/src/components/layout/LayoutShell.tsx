@@ -20,12 +20,21 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       setTimeout(() => setIsCollapsed(true), 0);
     }
     setTimeout(() => setMounted(true), 0);
+  }, []);
 
+  useEffect(() => {
     const checkAuth = async () => {
       if (pathname === '/login' || pathname === '/register') {
         setAuthLoading(false);
         return;
       }
+
+      // Skip redundant API fetches if already authenticated in memory
+      if (isAuthenticated) {
+        setAuthLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch('/api/auth/me');
         const data = await res.json();
@@ -49,7 +58,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
     };
 
     checkAuth();
-  }, [pathname, router]);
+  }, [pathname, router, isAuthenticated]);
 
   const handleToggle = () => {
     setIsCollapsed((prev) => {
