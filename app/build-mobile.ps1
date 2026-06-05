@@ -27,9 +27,10 @@ try {
     Write-Host "Adjusting layout configuration to force-static..."
     (Get-Content src/app/layout.tsx) -replace "export const dynamic = 'force-dynamic';", "export const dynamic = 'force-static';" | Set-Content src/app/layout.tsx
     
-    # 4. Trigger build with BUILD_MOBILE env flag active
+    # 4. Trigger build with BUILD_MOBILE and NEXT_PUBLIC_BUILD_MOBILE env flags active
     Write-Host "Compiling static client-side web application..."
     $env:BUILD_MOBILE="true"
+    $env:NEXT_PUBLIC_BUILD_MOBILE="true"
     npx next build
     
     Write-Host "Static build completed successfully! Exported to out/ directory."
