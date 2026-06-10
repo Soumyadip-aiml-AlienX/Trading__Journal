@@ -61,7 +61,13 @@ export default async function RootLayout({
       const settings = await prisma.settings.findUnique({
         where: { userId: user.id }
       });
-      initialShowOnboarding = !settings || !settings.onboardingDone;
+      if (!settings) {
+        // No settings row — check if user has trades to determine if they're existing
+        const tradeCount = await prisma.trade.count({ where: { userId: user.id }, take: 1 });
+        initialShowOnboarding = tradeCount === 0; // Only onboard truly new users
+      } else {
+        initialShowOnboarding = !settings.onboardingDone;
+      }
     } catch (err) {
       console.error('Failed to load settings in layout:', err);
     }

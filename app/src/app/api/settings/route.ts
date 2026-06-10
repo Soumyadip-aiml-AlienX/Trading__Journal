@@ -16,6 +16,10 @@ export async function GET() {
     });
 
     if (!settings) {
+      // Check if user already has trades — if so, they already completed onboarding
+      const tradeCount = await prisma.trade.count({ where: { userId: user.id }, take: 1 });
+      const isExistingUser = tradeCount > 0;
+
       settings = await prisma.settings.create({
         data: {
           userId: user.id,
@@ -23,6 +27,7 @@ export async function GET() {
           currentPhase: 'Phase 1',
           riskPerTrade: 1.5,
           maxTradesPerDay: 2,
+          onboardingDone: isExistingUser,
         },
       });
     }
