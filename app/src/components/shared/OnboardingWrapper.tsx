@@ -10,17 +10,45 @@ interface OnboardingWrapperProps {
 
 export default function OnboardingWrapper({ initialShow }: OnboardingWrapperProps) {
   const [show, setShow] = useState(initialShow);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthVerified, setIsAuthVerified] = useState(initialShow);
   const pathname = usePathname();
 
   useEffect(() => {
-    const loggedIn = localStorage.getItem('maven_logged_in') === 'true';
-    setIsAuthenticated(loggedIn);
+    const checkAuthAndSettings = async () => {
+      const isAuthPage = pathname?.includes('/login') || pathname?.includes('/register');
+      if (isAuthPage) {
+        setIsAuthVerified(false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated) {
+            const settingsRes = await fetch('/api/settings');
+            if (settingsRes.ok) {
+              const settings = await settingsRes.json();
+              setShow(!settings || !settings.onboardingDone);
+            } else {
+              setShow(true);
+            }
+            setIsAuthVerified(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to verify session for onboarding:', err);
+      }
+      setIsAuthVerified(false);
+    };
+
+    checkAuthAndSettings();
   }, [pathname]);
 
   const isAuthPage = pathname?.includes('/login') || pathname?.includes('/register');
 
-  if (!show || isAuthPage || !isAuthenticated) return null;
+  if (!show || isAuthPage || !isAuthVerified) return null;
 
   return (
     <OnboardingWizard

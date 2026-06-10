@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import DrawdownHeader from '@/components/layout/DrawdownHeader';
+import OnboardingWrapper from '@/components/shared/OnboardingWrapper';
 
-export default function LayoutShell({ children }: { children: React.ReactNode }) {
+export default function LayoutShell({ children, initialShowOnboarding = false }: { children: React.ReactNode; initialShowOnboarding?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -102,6 +103,9 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-white flex">
+      {/* Onboarding Flow */}
+      <OnboardingWrapper initialShow={initialShowOnboarding} />
+
       {/* Skip to Main Link */}
       <a
         href="#main-content"

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
-import OnboardingWrapper from '@/components/shared/OnboardingWrapper';
 import prisma from '@/lib/prisma';
 import { ToastProvider } from '@/components/shared/Toast';
 import { DrawdownProvider } from '@/context/DrawdownContext';
@@ -182,11 +181,8 @@ export default async function RootLayout({
         />
         <ToastProvider>
           <DrawdownProvider>
-            {/* Onboarding Flow */}
-            <OnboardingWrapper initialShow={initialShowOnboarding} />
-
             {/* Layout Shell */}
-            <LayoutShell>{children}</LayoutShell>
+            <LayoutShell initialShowOnboarding={initialShowOnboarding}>{children}</LayoutShell>
 
             {/* Global Keyboard Shortcut Dialog */}
             <QuickEntryModal />
