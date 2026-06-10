@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import OnboardingWizard from '@/components/shared/OnboardingWizard';
 
@@ -10,15 +10,22 @@ interface OnboardingWrapperProps {
 
 export default function OnboardingWrapper({ initialShow }: OnboardingWrapperProps) {
   const [show, setShow] = useState(initialShow);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pathname = usePathname();
 
-  if (!show || pathname === '/login' || pathname === '/register') return null;
+  useEffect(() => {
+    const loggedIn = localStorage.getItem('maven_logged_in') === 'true';
+    setIsAuthenticated(loggedIn);
+  }, [pathname]);
+
+  const isAuthPage = pathname?.includes('/login') || pathname?.includes('/register');
+
+  if (!show || isAuthPage || !isAuthenticated) return null;
 
   return (
     <OnboardingWizard
       onComplete={() => {
         setShow(false);
-        // Refresh the page to load initial settings properly
         window.location.reload();
       }}
     />
