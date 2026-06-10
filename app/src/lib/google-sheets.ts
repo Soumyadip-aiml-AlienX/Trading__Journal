@@ -140,7 +140,7 @@ export async function syncToGoogleSheets(userId: string): Promise<{ success: boo
         t.rr1 ? `1:${t.rr1.toFixed(1)}` : '',
         JSON.parse(t.setupTypes || '[]').join(', '),
         t.session,
-        `${t.checklistScore}/11`,
+        `${t.checklistScore}/36`,
         JSON.parse(t.emotionBefore || '[]').join(', '),
         t.disciplineRating || '',
       ];

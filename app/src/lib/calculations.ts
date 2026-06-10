@@ -316,7 +316,7 @@ export function generateDailySummary(
     if (best) summary += ` Best trade: ${best.tradeCode} ${best.actualPnlPct !== null ? (best.actualPnlPct >= 0 ? '+' : '') + best.actualPnlPct.toFixed(2) : 'N/A'}%.`;
     if (worst) summary += ` Worst trade: ${worst.tradeCode} ${worst.actualPnlPct !== null ? (worst.actualPnlPct >= 0 ? '+' : '') + worst.actualPnlPct.toFixed(2) : 'N/A'}%.`;
   }
-  summary += ` I followed ${avgChecklist}/11 checklist rules on average. My discipline rating was ${avgDiscipline}/5.`;
+  summary += ` I followed ${avgChecklist}/36 checklist rules on average. My discipline rating was ${avgDiscipline}/5.`;
   if (lesson) summary += ` Key lesson: ${lesson}.`;
 
   return summary;

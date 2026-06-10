@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     // Send Discord/Telegram Notification
     try {
       const directionEmoji = trade.direction === 'BUY' ? '🟢' : '🔴';
-      const notificationMessage = `[MAVEN JOURNAL] ${directionEmoji} ${trade.direction} Entered: ${trade.asset} @ ${trade.entryPrice} | SL: ${trade.stopLoss} | TP1: ${trade.tp1} | Checklist: ${trade.checklistScore}/11`;
+      const notificationMessage = `[ALIENX JOURNAL] ${directionEmoji} ${trade.direction} Entered: ${trade.asset} @ ${trade.entryPrice} | SL: ${trade.stopLoss} | TP1: ${trade.tp1} | Checklist: ${trade.checklistScore}/36`;
       await sendNotification(notificationMessage, user.id);
     } catch (err) {
       console.error('Failed to send entry notification:', err);

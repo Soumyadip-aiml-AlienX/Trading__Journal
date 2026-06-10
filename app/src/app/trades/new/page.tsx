@@ -7,18 +7,167 @@ import ScreenshotUploader from '@/components/trades/ScreenshotUploader';
 import TradingViewChart, { getTradingViewUrl } from '@/components/shared/TradingViewChart';
 import { useToast } from '@/components/shared/Toast';
 
-const CHECKLIST_ITEMS = [
-  '15M trend identified (BOS confirmed)',
-  'Valid Order Block marked on 15M',
-  'Price returned to OB zone',
-  'Inside Killzone session window',
-  '5M entry trigger confirmed (FVG/BOS/OTE)',
-  'Liquidity grab visible before reversal',
-  'No red news within 30 minutes',
-  'Risk set to 1.5%',
-  'SL placed correctly below/above OB',
-  'TP1 and TP2 marked on chart',
-  'RR minimum 1:2 confirmed',
+interface GroupDefinition {
+  id: number;
+  title: string;
+  badge: 'PRE-SESSION' | '1H' | '15M' | '1M' | 'ENTRY';
+  bgClass: string;
+  borderClass: string;
+  warning?: string;
+  skipCondition?: {
+    text: string;
+    reason: string;
+  };
+  steps: {
+    num: number;
+    title: string;
+    note: string;
+    type: 'required' | 'mark' | 'observe' | 'wait';
+    path?: 'bullish' | 'bearish';
+  }[];
+}
+
+const GROUPS: GroupDefinition[] = [
+  {
+    id: 1,
+    title: 'Group 1: PRE-SESSION',
+    badge: 'PRE-SESSION',
+    bgClass: 'bg-slate-900/90 text-slate-200',
+    borderClass: 'border-slate-800',
+    warning: 'All times shown in IST (UTC+5:30). NY Open = 5:30 PM – 7:30 PM IST.',
+    steps: [
+      { num: 1, title: 'Confirm it is NY Open session: 5:30 PM – 7:30 PM IST', note: 'Do not open charts before 5:30 PM IST. If past 7:15 PM IST — skip the session.', type: 'required' },
+      { num: 2, title: 'Select the asset to analyse: XAUUSD or EURUSD', note: 'Analyse one asset at a time. Complete full checklist before switching to the second asset.', type: 'required' },
+      { num: 3, title: 'Check Forex Factory: no red news within 30 minutes of current IST time', note: 'Convert all news times to IST. If red news due within 30 min — wait and resume 30 min after release.', type: 'required' },
+      { num: 4, title: 'Confirm: daily drawdown below 2% AND trades taken today below 2', note: 'Two losses = 2% daily loss = session over. If either limit is hit — close charts immediately.', type: 'required' },
+    ]
+  },
+  {
+    id: 2,
+    title: 'Group 2: 1H CHART — ESTABLISH BIAS',
+    badge: '1H',
+    bgClass: 'bg-blue-950/90 text-blue-200',
+    borderClass: 'border-blue-900',
+    skipCondition: {
+      text: 'No clear 1H BOS — bias ambiguous',
+      reason: 'No clear 1H BOS — bias ambiguous. Skip asset for the entire session.'
+    },
+    steps: [
+      { num: 5, title: 'Open the 1H chart for the selected asset', note: 'Top-down analysis starts here. Do not look at 15M or 1M yet.', type: 'required' },
+      { num: 6, title: 'Identify the most recent 1H Break of Structure (BOS)', note: 'HH + HL + upside BOS = Bullish · LH + LL + downside BOS = Bearish', type: 'required' },
+      { num: 7, title: 'Confirm and record the bias: BULLISH or BEARISH', note: 'No clear BOS or choppy price action = no bias. Skip this asset for the session.', type: 'required' },
+    ]
+  },
+  {
+    id: 3,
+    title: 'Group 3: 1H CHART — MARK SWING LEVELS',
+    badge: '1H',
+    bgClass: 'bg-blue-950/90 text-blue-200',
+    borderClass: 'border-blue-900',
+    steps: [
+      { num: 8, title: "Mark the most recent 1H Swing High — label '1H Swing High'", note: 'Buy stop liquidity above this. Bearish bias: institutions target this level first.', type: 'mark' },
+      { num: 9, title: "Mark the most recent 1H Swing Low — label '1H Swing Low'", note: 'Sell stop liquidity below this. Bullish bias: institutions target this level first.', type: 'mark' },
+      { num: 10, title: 'Note which liquidity level institutions will target first', note: 'Bullish: sweep of 1H Swing Low before moving up · Bearish: sweep of 1H Swing High before moving down.', type: 'observe' },
+    ]
+  },
+  {
+    id: 4,
+    title: 'Group 4: 15M CHART — REFINE STRUCTURE',
+    badge: '15M',
+    bgClass: 'bg-emerald-950/90 text-emerald-200',
+    borderClass: 'border-emerald-900',
+    skipCondition: {
+      text: '15M structure conflicts with 1H bias',
+      reason: '15M structure conflicts with 1H bias. Skip this asset.'
+    },
+    steps: [
+      { num: 11, title: 'Switch to 15M chart', note: '1H bias is absolute filter. 15M must agree with it.', type: 'required' },
+      { num: 12, title: "Mark most recent 15M Swing High — label '15M Swing High'", note: 'Refined structural level within the 1H direction.', type: 'mark' },
+      { num: 13, title: "Mark most recent 15M Swing Low — label '15M Swing Low'", note: 'Bullish: OB/FVG forms near this swing low · Bearish: OB/FVG forms near the swing high.', type: 'mark' },
+      { num: 14, title: 'Confirm 15M structure agrees with 1H bias', note: 'Opposing 15M structure = skip this asset immediately.', type: 'required' },
+    ]
+  },
+  {
+    id: 5,
+    title: 'Group 5: 15M — FIND ZONE',
+    badge: '15M',
+    bgClass: 'bg-emerald-950/90 text-emerald-200',
+    borderClass: 'border-emerald-900',
+    skipCondition: {
+      text: 'No OB or FVG in swing area',
+      reason: 'No OB or FVG in 15M swing area. Skip this asset for the session.'
+    },
+    steps: [
+      // Bullish path steps
+      { num: 15, title: 'Focus on the 15M Swing Low area', note: 'Bullish setups form in discount zones — institutions buy at swing low area.', type: 'required', path: 'bullish' },
+      { num: 16, title: 'Search for Bullish Order Block in the swing low area', note: 'Last bearish candle before a bullish BOS. Mark high and low of that candle.', type: 'mark', path: 'bullish' },
+      { num: 17, title: 'Search for Bullish FVG in the swing low area', note: '3-candle upward imbalance — gap between candle 1 high and candle 3 low.', type: 'mark', path: 'bullish' },
+      { num: 18, title: "If both exist: select the one closest to current price as the active zone", note: "Closest zone = highest probability. Label it 'ACTIVE ZONE — BUY'.", type: 'required', path: 'bullish' },
+      { num: 19, title: 'Note if OB and FVG overlap — highest confluence zone', note: 'Overlap = two institutional reasons to buy at the same level. Strongest setup.', type: 'observe', path: 'bullish' },
+      
+      // Bearish path steps
+      { num: 15, title: 'Focus on the 15M Swing High area', note: 'Bearish setups form in premium zones — institutions sell at swing high area.', type: 'required', path: 'bearish' },
+      { num: 16, title: 'Search for Bearish Order Block in the swing high area', note: 'Last bullish candle before a bearish BOS. Mark high and low of that candle.', type: 'mark', path: 'bearish' },
+      { num: 17, title: 'Search for Bearish FVG in the swing high area', note: '3-candle downward imbalance — gap between candle 1 low and candle 3 high.', type: 'mark', path: 'bearish' },
+      { num: 18, title: "If both exist: select the one closest to current price as the active zone", note: "Closest zone = highest probability. Label it 'ACTIVE ZONE — SELL'.", type: 'required', path: 'bearish' },
+      { num: 19, title: 'Note if OB and FVG overlap — highest confluence zone', note: 'Overlap = two institutional reasons to sell at the same level.', type: 'observe', path: 'bearish' },
+    ]
+  },
+  {
+    id: 6,
+    title: 'Group 6: 15M — MARK ZONE AND WAIT',
+    badge: '15M',
+    bgClass: 'bg-emerald-950/90 text-emerald-200',
+    borderClass: 'border-emerald-900',
+    warning: 'Session closes 7:30 PM IST. If price not at zone by 7:15 PM IST — skip trade. Never chase after Killzone ends.',
+    skipCondition: {
+      text: 'Price closed through zone with no reaction',
+      reason: 'Price closed through zone with no reaction — invalidated. Wait for next session.'
+    },
+    steps: [
+      { num: 20, title: 'Draw shaded rectangle over the active OB or FVG zone on 15M', note: "Bullish: label 'BUY ZONE' · Bearish: label 'SELL ZONE'.", type: 'mark' },
+      { num: 21, title: 'Set price alert at entry edge of the zone', note: 'Bullish: alert at zone top · Bearish: alert at zone bottom.', type: 'required' },
+      { num: 22, title: 'Wait — do not act until price reaches the zone', note: 'Step away from chart. Alert will notify you.', type: 'wait' },
+      { num: 23, title: 'Price entered zone — confirm visible reaction (no full body close-through)', note: 'Full candle body through far edge = zone invalidated. Wicks through are acceptable.', type: 'required' },
+    ]
+  },
+  {
+    id: 7,
+    title: 'Group 7: 1M CHART — WAIT FOR BIAS CHANGE',
+    badge: '1M',
+    bgClass: 'bg-rose-950/90 text-rose-200',
+    borderClass: 'border-rose-900',
+    warning: 'If 1M confirmation takes price far into zone — recheck SL is within 1% risk. If too wide — skip trade.',
+    skipCondition: {
+      text: 'Two consecutive 1M body closes did not appear inside zone',
+      reason: 'Two consecutive 1M body closes did not appear inside the zone. Price exited — skip.'
+    },
+    steps: [
+      { num: 24, title: 'Switch to 1M chart ONLY after price enters and reacts inside the 15M zone', note: 'Never open 1M before price reaches the zone.', type: 'required' },
+      { num: 25, title: 'Identify the most recent minor 1M swing level in the trade direction', note: 'Bullish: minor 1M swing high to break upward · Bearish: minor 1M swing low to break downward.', type: 'mark' },
+      { num: 26, title: 'Wait for the FIRST 1M candle BODY to close beyond the swing level in trade direction', note: 'Body close counts. Wick-only close does NOT count.', type: 'wait' },
+      { num: 27, title: 'Wait for the SECOND consecutive 1M candle BODY to also close in trade direction', note: 'Both bodies must close consecutively in trade direction. This confirms the 1M bias change.', type: 'required' },
+      { num: 28, title: 'Confirmed: two consecutive 1M body closes in trade direction inside or adjacent to zone', note: 'This is the entry trigger. If price exits zone before trigger — invalidate and skip.', type: 'required' },
+    ]
+  },
+  {
+    id: 8,
+    title: 'Group 8: ENTRY',
+    badge: 'ENTRY',
+    bgClass: 'bg-amber-950/90 text-amber-200',
+    borderClass: 'border-amber-900',
+    warning: 'After entry — step away. Do not move SL. Do not close early. Let the 1:5 RR work.',
+    steps: [
+      { num: 29, title: 'Final confirmation: all prior steps verified', note: 'Pre-session ✓ · 1H bias ✓ · 1H levels ✓ · 15M structure ✓ · zone ✓ · zone reacted ✓ · 1M two-candle BOS ✓', type: 'required' },
+      { num: 30, title: 'Enter at market on close of second confirming 1M candle', note: 'Alternative: limit at 1M BOS retest for better price (only if price has not moved far from zone).', type: 'required' },
+      { num: 31, title: 'Place SL behind full zone with buffer (Gold: 2–3 pips · EURUSD: 1–2 pips)', note: 'Bullish: SL below lowest wick · Bearish: SL above highest wick. Never inside the zone.', type: 'required' },
+      { num: 32, title: 'Verify risk is exactly 1% of account — calculate and set position size', note: 'Risk Amount = Account × 1% · Lot Size = Risk Amount ÷ (SL pips × pip value). Never round up.', type: 'required' },
+      { num: 33, title: 'Set TP1 at 1:1 RR — same distance as SL from entry', note: 'At TP1: close 50% immediately + move SL to breakeven. Trade is now risk-free. If TP1 cannot give 1:1 RR due to structure — this setup is invalid. Do not enter.', type: 'required' },
+      { num: 34, title: 'Set TP2 at exactly 1:5 RR — five times the SL distance from entry', note: 'Example: SL = 20 pips → TP2 = 100 pips from entry. Fixed target. Do not close early. Do not move TP2.', type: 'required' },
+      { num: 35, title: 'Screenshot: 1H with bias marked · 15M with zone marked · 1M with BOS marked', note: 'Three screenshots minimum. Take before doing anything else.', type: 'required' },
+      { num: 36, title: "Log trade in journal: asset · bias · direction · entry · SL · TP1 · TP2 · zone type · IST entry time", note: "Log at entry. Record exact IST time. Do not log after close — accuracy matters. (AND IT IS NOT MAVEN TRADING JOURNAL IT IS - 'AlienX Trading Journal'", type: 'required' },
+    ]
+  }
 ];
 
 const EMOTIONS = [
@@ -78,9 +227,11 @@ export default function NewTradePage() {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [showLiveChart, setShowLiveChart] = useState(false);
+  const [accountSize, setAccountSize] = useState<number>(100000);
+  
   const [form, setForm] = useState<TradeFormData>({
     date: new Date().toISOString().split('T')[0],
-    entryTime: new Date().toTimeString().slice(0, 5),
+    entryTime: '',
     exitTime: '',
     session: 'NY Open',
     challengePhase: 'Phase 1',
@@ -94,7 +245,7 @@ export default function NewTradePage() {
     tp3: '',
     exitPrice: '',
     exitReason: '',
-    checklistItems: new Array(11).fill(false),
+    checklistItems: new Array(36).fill(false),
     preReasoning: '',
     postNotes: '',
     mistakes: '',
@@ -115,6 +266,14 @@ export default function NewTradePage() {
   const [pendingAlerts, setPendingAlerts] = useState<any[]>([]);
   const [checkInDone, setCheckInDone] = useState<boolean | null>(null);
 
+  // Checklist specific states
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [skipped, setSkipped] = useState(false);
+  const [skipReason, setSkipReason] = useState('');
+  const [completionTimeIST, setCompletionTimeIST] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<number, boolean>>({});
+
   useEffect(() => {
     async function checkAlerts() {
       try {
@@ -132,7 +291,6 @@ export default function NewTradePage() {
         const res = await fetch(`/api/daily-log?date=${todayStr}`);
         if (res.ok) {
           const data = await res.json();
-          // If daily log exists and has a readiness score, check-in is done
           setCheckInDone(!!(data && data.readinessScore !== null && data.readinessScore !== undefined));
         } else {
           setCheckInDone(false);
@@ -141,15 +299,75 @@ export default function NewTradePage() {
         setCheckInDone(false);
       }
     }
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.accountSize) {
+            setAccountSize(data.accountSize);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+      }
+    }
     checkAlerts();
     checkTodayCheckIn();
+    loadSettings();
+
+    // Load session states from localStorage
+    const storedStart = localStorage.getItem('alienx_session_start_time');
+    if (storedStart) {
+      setSessionStartTime(parseInt(storedStart, 10));
+    }
+    const storedItems = localStorage.getItem('alienx_checklist_items');
+    if (storedItems) {
+      try {
+        const parsed = JSON.parse(storedItems);
+        if (Array.isArray(parsed) && parsed.length === 36) {
+          setForm(prev => ({ ...prev, checklistItems: parsed }));
+        }
+      } catch {}
+    }
+    const storedDirection = localStorage.getItem('alienx_direction');
+    if (storedDirection) {
+      setForm(prev => ({ ...prev, direction: storedDirection as 'BUY' | 'SELL' }));
+    }
+    const storedSkipped = localStorage.getItem('alienx_skipped');
+    if (storedSkipped === 'true') {
+      setSkipped(true);
+      setSkipReason(localStorage.getItem('alienx_skip_reason') || '');
+    }
+    const storedCompletion = localStorage.getItem('alienx_completion_time_ist');
+    if (storedCompletion) {
+      setCompletionTimeIST(storedCompletion);
+      setForm(prev => ({ ...prev, entryTime: storedCompletion }));
+    }
   }, []);
 
-  const handlePreFill = async (alert: any) => {
+  // Sync to localStorage
+  useEffect(() => {
+    localStorage.setItem('alienx_checklist_items', JSON.stringify(form.checklistItems));
+    localStorage.setItem('alienx_direction', form.direction);
+  }, [form.checklistItems, form.direction]);
+
+  // Session elapsed timer
+  useEffect(() => {
+    let interval: any;
+    if (sessionStartTime && !skipped) {
+      interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - sessionStartTime) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [sessionStartTime, skipped]);
+
+  const handlePreFill = (alert: any) => {
     setForm((prev) => ({
       ...prev,
       asset: alert.ticker,
-      direction: alert.action,
+      direction: alert.action.toUpperCase(),
       entryPrice: alert.price?.toString() || '',
       stopLoss: alert.stopLoss?.toString() || '',
       tp1: alert.tp1?.toString() || '',
@@ -157,29 +375,108 @@ export default function NewTradePage() {
       session: alert.session || 'NY Open',
       setupTypes: alert.setup ? [alert.setup] : [],
     }));
-
-    try {
-      await fetch(`/api/webhook/tradingview?id=${alert.id}&status=converted`, {
-        method: 'PATCH',
-      });
-      setPendingAlerts((prev) => prev.filter((a) => a.id !== alert.id));
-    } catch (err) {
-      console.error('Failed to update alert status:', err);
-    }
   };
 
-  const handleDismissAlert = async (alertId: string) => {
-    try {
-      await fetch(`/api/webhook/tradingview?id=${alertId}&status=ignored`, {
-        method: 'PATCH',
+  // Filter groups and steps by selected bias path
+  const getActiveSteps = () => {
+    const steps: any[] = [];
+    const biasPath = form.direction === 'BUY' ? 'bullish' : 'bearish';
+    GROUPS.forEach(group => {
+      group.steps.forEach(step => {
+        if (!step.path || step.path === biasPath) {
+          steps.push({
+            ...step,
+            groupTitle: group.title,
+            groupBadge: group.badge,
+            groupId: group.id,
+          });
+        }
       });
-      setPendingAlerts((prev) => prev.filter((a) => a.id !== alertId));
-    } catch (err) {
-      console.error('Failed to dismiss alert:', err);
-    }
+    });
+    return steps;
   };
 
-  // Auto-calculated values
+  const activeSteps = getActiveSteps();
+  const checklistScore = form.checklistItems.filter(Boolean).length;
+  const isComplete = checklistScore === 36;
+
+  // Checklist interaction handlers
+  const handleCheckChange = (index: number, checked: boolean) => {
+    const newItems = [...form.checklistItems];
+    if (checked) {
+      newItems[index] = true;
+      if (index === 0 && !sessionStartTime) {
+        const now = Date.now();
+        setSessionStartTime(now);
+        localStorage.setItem('alienx_session_start_time', now.toString());
+      }
+      if (index === 35) {
+        const istStr = new Date().toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        setCompletionTimeIST(istStr);
+        localStorage.setItem('alienx_completion_time_ist', istStr);
+        setForm(prev => ({ ...prev, entryTime: istStr }));
+      }
+    } else {
+      // Uncheck this step and all subsequent steps
+      for (let k = index; k < 36; k++) {
+        newItems[k] = false;
+      }
+    }
+    setForm(prev => ({ ...prev, checklistItems: newItems }));
+  };
+
+  const handleTriggerSkip = (reason: string) => {
+    setSkipped(true);
+    setSkipReason(reason);
+    localStorage.setItem('alienx_skipped', 'true');
+    localStorage.setItem('alienx_skip_reason', reason);
+    toast.error(`Session Skipped: ${reason}`);
+  };
+
+  const handleNewSession = () => {
+    localStorage.removeItem('alienx_session_start_time');
+    localStorage.removeItem('alienx_checklist_items');
+    localStorage.removeItem('alienx_direction');
+    localStorage.removeItem('alienx_skipped');
+    localStorage.removeItem('alienx_skip_reason');
+    localStorage.removeItem('alienx_completion_time_ist');
+    setSessionStartTime(null);
+    setElapsedTime(0);
+    setSkipped(false);
+    setSkipReason('');
+    setCompletionTimeIST('');
+    setForm(prev => ({
+      ...prev,
+      checklistItems: new Array(36).fill(false),
+      entryPrice: '',
+      stopLoss: '',
+      tp1: '',
+      tp2: '',
+      preReasoning: '',
+    }));
+    toast.success('Checklist reset. New session started.');
+  };
+
+  const handleBiasChange = (newBias: 'BULLISH' | 'BEARISH') => {
+    const newDirection = newBias === 'BULLISH' ? 'BUY' : 'SELL';
+    const newItems = [...form.checklistItems];
+    // Reset steps from Step 7 (index 6) onwards
+    for (let k = 6; k < 36; k++) {
+      newItems[k] = false;
+    }
+    setForm(prev => ({ ...prev, direction: newDirection, checklistItems: newItems }));
+  };
+
+  const toggleGroupCollapse = (groupId: number) => {
+    setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  // Position Sizing Lot Calculations
   const entry = parseFloat(form.entryPrice) || 0;
   const sl = parseFloat(form.stopLoss) || 0;
   const tp1 = parseFloat(form.tp1) || 0;
@@ -187,15 +484,69 @@ export default function NewTradePage() {
   const riskPips = entry && sl ? calculateRiskPips(entry, sl) : 0;
   const rr1 = entry && sl && tp1 ? calculateRR(entry, sl, tp1) : 0;
   const rr2 = entry && sl && tp2 ? calculateRR(entry, sl, tp2) : 0;
-  const checklistScore = form.checklistItems.filter(Boolean).length;
-  const rrWarning = rr1 > 0 && rr1 < 2;
 
-  const scoreColor =
-    checklistScore >= 9
-      ? 'text-buy'
-      : checklistScore >= 7
-      ? 'text-[var(--color-warning)]'
-      : 'text-sell';
+  // Auto-fill TP1 (1:1) and TP2 (1:5) when entry and SL are typed
+  useEffect(() => {
+    if (entry > 0 && sl > 0) {
+      const diff = Math.abs(entry - sl);
+      let targetTp1 = 0;
+      let targetTp2 = 0;
+      if (form.direction === 'BUY') {
+        targetTp1 = entry + diff;
+        targetTp2 = entry + diff * 5;
+      } else {
+        targetTp1 = entry - diff;
+        targetTp2 = entry - diff * 5;
+      }
+      setForm(prev => ({
+        ...prev,
+        tp1: targetTp1.toFixed(prev.asset === 'EURUSD' ? 5 : 2),
+        tp2: targetTp2.toFixed(prev.asset === 'EURUSD' ? 5 : 2),
+      }));
+    }
+  }, [entry, sl, form.direction, form.asset]);
+
+  const getLotSize = () => {
+    if (!entry || !sl || entry === sl) return 0;
+    const riskAmount = accountSize * 0.01; // exactly 1%
+    const diff = Math.abs(entry - sl);
+    let lotSize = 0;
+    if (form.asset === 'XAUUSD') {
+      lotSize = riskAmount / (diff * 100);
+    } else if (form.asset === 'EURUSD') {
+      lotSize = riskAmount / (diff * 100000);
+    }
+    return Math.floor(lotSize * 100) / 100; // never round up
+  };
+
+  const getZoneType = () => {
+    // OB: Step 16 (index 15), FVG: Step 17 (index 16)
+    const obChecked = form.checklistItems[15];
+    const fvgChecked = form.checklistItems[16];
+    if (obChecked && fvgChecked) return 'OB + FVG Overlap';
+    if (obChecked) return 'Order Block (OB)';
+    if (fvgChecked) return 'Fair Value Gap (FVG)';
+    return 'OB or FVG Zone';
+  };
+
+  const formatISTTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    }) + ' IST';
+  };
+
+  const formatElapsed = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
+  };
+
+  const scoreColor = isComplete ? 'text-buy' : 'text-slate-400';
 
   const toggleSetup = (setup: string) => {
     setForm((prev) => ({
@@ -216,13 +567,19 @@ export default function NewTradePage() {
   };
 
   const handleSubmit = async () => {
-    if (checklistScore < 11) {
-      toast.warning('Trade Entry Blocked: All 11 Confluence Checklist items must be checked.');
+    if (!isComplete) {
+      toast.warning('Trade Entry Blocked: All 36 checklist items must be checked.');
       return;
     }
 
     if (!form.entryPrice || !form.stopLoss || !form.tp1 || !form.tp2 || !form.preReasoning) {
       toast.warning('Please fill in all required fields: Entry, SL, TP1, TP2, and Pre-Trade Reasoning.');
+      return;
+    }
+
+    // Verify minimum RR check
+    if (rr1 < 1) {
+      toast.warning('Invalid Setup: TP1 must yield at least a 1:1 RR.');
       return;
     }
 
@@ -247,10 +604,11 @@ export default function NewTradePage() {
       });
 
       if (res.ok) {
-        toast.success('Trade saved successfully!');
+        toast.success('Trade logged successfully in AlienX journal!');
+        handleNewSession(); // clear checklist session
         router.push('/trades');
       } else {
-        toast.error('Failed to save trade. Please try again.');
+        toast.error('Failed to save trade. Please check parameters.');
       }
     } catch {
       toast.error('Failed to save trade. Please try again.');
@@ -262,178 +620,274 @@ export default function NewTradePage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">New Trade Entry</h1>
+        <h1 className="text-xl font-bold flex items-center gap-2">
+          <span>AlienX Trading Journal — New Entry</span>
+        </h1>
         <div className="flex gap-2">
           <button onClick={() => router.back()} className="btn-secondary text-xs">
             Cancel
           </button>
           <button 
             onClick={handleSubmit} 
-            disabled={saving || checklistScore < 11} 
-            className={`btn-primary text-xs px-6 ${checklistScore < 11 ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={saving || !isComplete} 
+            className={`btn-primary text-xs px-6 ${!isComplete ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {saving ? 'Saving...' : '💾 Save Trade'}
+            {saving ? 'Saving...' : '💾 Log Trade'}
           </button>
         </div>
       </div>
 
-      {/* Pending TradingView Alert Banner */}
-      {pendingAlerts.length > 0 && (
-        <div className="bg-[var(--color-accent-dim)] border border-[var(--color-accent)] rounded-lg p-4 text-xs flex justify-between items-center text-[var(--color-text-primary)]">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🔔</span>
-            <div>
-              <span className="font-bold">Pending TradingView Alert:</span> {pendingAlerts[0].ticker} {pendingAlerts[0].action} @ {pendingAlerts[0].price}
-              {pendingAlerts[0].setup && <span className="text-[var(--color-text-muted)]"> ({pendingAlerts[0].setup})</span>}
-            </div>
-          </div>
+      {/* Checklist Gatekeeper Control Bar */}
+      <div className="glass-card p-4 flex flex-col md:flex-row items-center justify-between gap-4 border border-[var(--color-border)]">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-bold text-[var(--color-text-secondary)] uppercase">Establish Bias:</span>
           <div className="flex gap-2">
             <button
-              onClick={() => handlePreFill(pendingAlerts[0])}
-              className="bg-[var(--color-accent)] text-white font-bold px-3 py-1.5 rounded hover:bg-blue-600 transition-colors cursor-pointer"
+              type="button"
+              disabled={skipped}
+              onClick={() => handleBiasChange('BULLISH')}
+              className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${form.direction === 'BUY' ? 'bg-buy text-white border border-buy shadow-lg shadow-buy/20' : 'bg-[var(--color-navy)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-white'}`}
             >
-              ⚡ Pre-Fill Form
+              🟢 BULLISH
             </button>
-            <button
-              onClick={() => handleDismissAlert(pendingAlerts[0].id)}
-              className="bg-slate-800 text-[var(--color-text-secondary)] px-3 py-1.5 rounded hover:bg-slate-700 transition-colors cursor-pointer"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* CO3: Pre-Session Check-In Reminder */}
-      {checkInDone === false && (
-        <div className="bg-amber-950/30 border border-amber-500/40 rounded-lg p-3 text-xs flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span aria-hidden="true">🧠</span>
-            <span className="text-amber-300 font-medium">
-              No pre-session check-in completed today. Trading without a psychology check-in may affect your discipline.
-            </span>
-          </div>
-          <a
-            href="/psychology"
-            className="shrink-0 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 px-3 py-1.5 rounded font-bold transition-colors"
-          >
-            Complete Check-In
-          </a>
-        </div>
-      )}
-
-      {/* RR Warning */}
-      {rrWarning && (
-        <div className="drawdown-banner drawdown-warning rounded-lg">
-          ⚠️ RR ratio is below 1:2 minimum ({rr1.toFixed(2)}). Consider adjusting TP1.
-        </div>
-      )}
-
-      {/* Confluence Checklist Gatekeeper (Separate at the top) */}
-      <div className={`glass-card p-6 border transition-all duration-300 ${checklistScore === 11 ? 'border-buy border-opacity-40 bg-buy/5 shadow-[0_0_15px_rgba(29,158,117,0.05)]' : 'border-[var(--color-border)] shadow-lg'}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-              <span>🛡️ Confluence Gatekeeper Checklist</span>
-              {checklistScore === 11 ? (
-                <span className="text-[10px] bg-buy/20 text-buy font-bold px-2.5 py-0.5 rounded-full">
-                  Unlocked
-                </span>
-              ) : (
-                <span className="text-[10px] bg-sell/20 text-sell font-bold px-2.5 py-0.5 rounded-full animate-pulse">
-                  Locked (Must tick all 11)
-                </span>
-              )}
-            </h2>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-              Prop firm discipline rule: Confirm all 11 confluence parameters before entering trade details.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowLiveChart(!showLiveChart)}
-              className={`text-[10px] px-3 py-1.5 rounded-lg border font-bold flex items-center gap-1.5 transition-all cursor-pointer select-none ${
-                showLiveChart
-                  ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)] animate-pulse'
-                  : 'bg-[var(--color-navy)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-white'
-              }`}
+              disabled={skipped}
+              onClick={() => handleBiasChange('BEARISH')}
+              className={`px-4 py-1.5 rounded-lg font-bold text-xs transition-all ${form.direction === 'SELL' ? 'bg-sell text-white border border-sell shadow-lg shadow-sell/20' : 'bg-[var(--color-navy)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-white'}`}
             >
-              <span>{showLiveChart ? '❌ Hide Chart' : '📊 Show Chart'}</span>
+              🔴 BEARISH
             </button>
-            <div className="text-right">
-              <span className={`text-xl font-bold font-mono ${scoreColor}`}>
-                {checklistScore}/11
-              </span>
-            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {CHECKLIST_ITEMS.map((item, i) => (
-            <label 
-              key={i} 
-              className={`flex items-center gap-2.5 p-3 rounded-lg border transition-all cursor-pointer select-none ${
-                form.checklistItems[i] 
-                  ? 'bg-buy/10 border-buy border-opacity-40 text-[var(--color-text-primary)] shadow-[0_2px_8px_rgba(29,158,117,0.05)] font-medium' 
-                  : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-navy)]'
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={form.checklistItems[i]}
-                onChange={(e) => {
-                  const newItems = [...form.checklistItems];
-                  newItems[i] = e.target.checked;
-                  setForm({ ...form, checklistItems: newItems });
-                }}
-                className="w-4 h-4 rounded accent-[var(--color-buy)] cursor-pointer"
-              />
-              <span className="text-xs leading-none">
-                {item}
-              </span>
-            </label>
-          ))}
+        <div className="flex items-center gap-4 text-xs font-semibold text-[var(--color-text-secondary)]">
+          {sessionStartTime && (
+            <div className="bg-[var(--color-surface)] px-3 py-1.5 rounded-lg border border-[var(--color-border)] flex items-center gap-2">
+              <span>⏱️ Session Elapsed:</span>
+              <span className="font-mono text-white text-sm">{formatElapsed(elapsedTime)}</span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">({formatISTTime(sessionStartTime)})</span>
+            </div>
+          )}
+          <button
+            onClick={handleNewSession}
+            className="bg-slate-800 border border-[var(--color-border)] text-slate-300 hover:text-white px-3 py-1.5 rounded-lg font-bold transition-all"
+          >
+            🔄 New Session
+          </button>
         </div>
       </div>
 
-      {/* Collapsible Live TradingView Chart */}
-      {showLiveChart && (
-        <div className="glass-card p-5 h-[480px] border border-[var(--color-accent)] border-opacity-35 animate-fade-in relative z-20">
-          <div className="flex items-center justify-between mb-3 text-xs">
-            <span className="font-bold flex items-center gap-1.5 text-[var(--color-text-primary)]">
-              🖥️ Live Interactive Chart: {form.asset}
-            </span>
-            <a
-              href={getTradingViewUrl(form.asset)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[var(--color-accent-light)] hover:underline font-bold text-[10px] flex items-center gap-0.5"
-            >
-              ↗️ Open Full Page
-            </a>
+      {/* Progress & Verification Card */}
+      <div className="glass-card p-5 border border-[var(--color-border)]">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Pre-Trade Checklist Progress</h2>
+            <p className="text-[11px] text-[var(--color-text-muted)]">Perform top-down checklist verification in sequence to unlock trade logs.</p>
           </div>
-          <div className="h-[400px] relative">
-            <TradingViewChart symbol={form.asset} />
+          <span className={`text-xl font-bold font-mono ${scoreColor}`}>
+            {checklistScore} / 36
+          </span>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="w-full bg-[var(--color-navy)] h-2 rounded-full overflow-hidden border border-[var(--color-border)] shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
+          <div
+            className={`h-full transition-all duration-300 ${isComplete ? 'bg-buy shadow-[0_0_8px_rgba(29,158,117,0.5)]' : 'bg-[var(--color-accent)]'}`}
+            style={{ width: `${(checklistScore / 36) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Main Checklist */}
+      <div className="space-y-4">
+        {GROUPS.map((group) => {
+          // Filter steps in group
+          const biasPath = form.direction === 'BUY' ? 'bullish' : 'bearish';
+          const groupSteps = group.steps.filter(step => !step.path || step.path === biasPath);
+          if (groupSteps.length === 0) return null;
+
+          // Find the indexes of these steps in the active list
+          const firstStepActiveIndex = activeSteps.findIndex(s => s.groupId === group.id && s.num === groupSteps[0].num);
+          const lastStepActiveIndex = firstStepActiveIndex + groupSteps.length - 1;
+
+          // Determine if group is collapsed
+          const isCollapsed = collapsedGroups[group.id] || false;
+
+          return (
+            <div
+              key={group.id}
+              className={`glass-card overflow-hidden border transition-all duration-300 ${skipped && firstStepActiveIndex > activeSteps.findIndex(s => s.checklistScore === checklistScore) ? 'opacity-30 pointer-events-none' : 'border-[var(--color-border)]'}`}
+            >
+              {/* Header band */}
+              <div
+                onClick={() => toggleGroupCollapse(group.id)}
+                className={`p-3 flex items-center justify-between cursor-pointer select-none border-b border-[var(--color-border)] ${group.bgClass}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold font-mono bg-black/35 px-2.5 py-0.5 rounded text-white border border-white/10">
+                    {group.badge}
+                  </span>
+                  <span className="text-sm font-bold tracking-wide">{group.title}</span>
+                  <span className="text-[10px] text-white/60">({groupSteps.length} steps)</span>
+                </div>
+                <span className="text-sm">{isCollapsed ? '➕' : '➖'}</span>
+              </div>
+
+              {!isCollapsed && (
+                <div className="p-4 space-y-4">
+                  {/* Warning banner */}
+                  {group.warning && (
+                    <div className="bg-amber-950/45 border border-amber-500/40 rounded-lg p-3 text-xs text-amber-300">
+                      ⚠️ {group.warning}
+                    </div>
+                  )}
+
+                  {/* Steps Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {groupSteps.map((step, localIndex) => {
+                      const activeIndex = firstStepActiveIndex + localIndex;
+                      const isChecked = form.checklistItems[activeIndex] || false;
+                      const isCheckable = activeIndex === 0 || form.checklistItems[activeIndex - 1];
+
+                      return (
+                        <label
+                          key={step.num}
+                          className={`flex flex-col p-3 rounded-lg border transition-all select-none ${
+                            isChecked
+                              ? 'bg-buy/10 border-buy border-opacity-40 text-[var(--color-text-primary)] shadow-[0_2px_8px_rgba(29,158,117,0.05)]'
+                              : isCheckable && !skipped
+                              ? 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-navy)] cursor-pointer'
+                              : 'bg-[var(--color-surface)]/40 border-[var(--color-border)]/50 text-[var(--color-text-muted)] opacity-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={!isCheckable || skipped}
+                              onChange={(e) => handleCheckChange(activeIndex, e.target.checked)}
+                              className="mt-0.5 w-4 h-4 rounded accent-[var(--color-buy)] cursor-pointer"
+                            />
+                            <div className="flex-1">
+                              <div className="text-xs font-bold leading-normal">
+                                Step {step.num} <span className="text-[10px] opacity-60 uppercase">[{step.type}]</span> — {step.title}
+                              </div>
+                              <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
+                                {step.note}
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {/* Skip Condition Banner */}
+                  {group.skipCondition && !skipped && (
+                    <div className="mt-2 bg-red-950/30 border border-red-500/35 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="text-xs text-red-300">
+                        🛑 <span className="font-bold">Skip Condition:</span> {group.skipCondition.text}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleTriggerSkip(group.skipCondition!.reason)}
+                        className="bg-red-950 hover:bg-red-900 border border-red-500/50 text-red-200 text-[10px] font-bold px-3 py-1.5 rounded transition-all shrink-0 cursor-pointer"
+                      >
+                        Trigger Invalidation (Skip)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Skipped Banner Notice */}
+      {skipped && (
+        <div className="bg-red-950/65 border border-red-500/60 rounded-xl p-6 text-center space-y-3 shadow-2xl">
+          <div className="text-4xl">🛑</div>
+          <h3 className="text-base font-bold text-red-300">Session Skipped</h3>
+          <p className="text-xs text-red-200 max-w-lg mx-auto">
+            {skipReason}
+          </p>
+          <button
+            onClick={handleNewSession}
+            className="btn-secondary text-xs px-4 py-2 hover:bg-red-900/20"
+          >
+            Start New Session
+          </button>
+        </div>
+      )}
+
+      {/* Final Summary Card when 36/36 complete */}
+      {isComplete && (
+        <div className="bg-buy/5 border border-buy border-opacity-45 rounded-xl p-5 shadow-[0_0_20px_rgba(29,158,117,0.1)] space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-buy border-opacity-25 pb-3">
+            <h2 className="text-sm font-bold text-buy flex items-center gap-1.5">
+              <span>✓ Strategy Checklist Complete</span>
+            </h2>
+            <span className="text-[10px] bg-buy text-white font-bold px-2 py-0.5 rounded-full">
+              Trade Confirmed
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div>
+              <span className="text-[10px] text-[var(--color-text-muted)] block uppercase">Asset</span>
+              <span className="font-bold text-white text-sm">{form.asset}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-[var(--color-text-muted)] block uppercase">Bias / Direction</span>
+              <span className={`font-bold text-sm ${form.direction === 'BUY' ? 'text-buy' : 'text-sell'}`}>
+                {form.direction === 'BUY' ? 'BULLISH (BUY)' : 'BEARISH (SELL)'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-[var(--color-text-muted)] block uppercase">Zone Type</span>
+              <span className="font-bold text-white text-sm">{getZoneType()}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-[var(--color-text-muted)] block uppercase">IST Entry Time</span>
+              <span className="font-bold text-white text-sm font-mono">{completionTimeIST || 'Logged'} IST</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 border-t border-buy border-opacity-25 pt-3">
+            <div className="bg-black/20 p-2.5 rounded border border-[var(--color-border)]">
+              <span className="text-[9px] text-[var(--color-text-muted)] block uppercase">Position Lot Size</span>
+              <span className="font-bold text-white text-sm font-mono">
+                {entry > 0 && sl > 0 ? getLotSize() : '0.00'} Lot (1% Fixed Risk)
+              </span>
+            </div>
+            <div className="bg-black/20 p-2.5 rounded border border-[var(--color-border)]">
+              <span className="text-[9px] text-[var(--color-text-muted)] block uppercase">Stop Loss</span>
+              <span className="font-bold text-white text-sm font-mono">{sl > 0 ? sl : '0.00'}</span>
+            </div>
+            <div className="bg-black/20 p-2.5 rounded border border-[var(--color-border)]">
+              <span className="text-[9px] text-[var(--color-text-muted)] block uppercase">Fixed TP2 (1:5 RR)</span>
+              <span className="font-bold text-buy text-sm font-mono">{tp2 > 0 ? tp2 : '0.00'}</span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Rest of the form, locked until 11/11 confluence is scored */}
+      {/* Rest of the form, locked until 36/36 checklist completed */}
       <div className="relative">
-        {checklistScore < 11 && (
-          <div className="absolute inset-0 bg-[#0a0a0c]/60 backdrop-blur-[2px] z-50 flex items-center justify-center rounded-xl p-4">
-            <div className="glass-card p-6 border border-sell/25 max-w-sm text-center space-y-3 shadow-2xl bg-black/45">
+        {!isComplete && (
+          <div className="absolute inset-0 bg-[#0a0a0c]/70 backdrop-blur-[2.5px] z-50 flex items-center justify-center rounded-xl p-4">
+            <div className="glass-card p-6 border border-sell/25 max-w-sm text-center space-y-3 bg-black/60 shadow-2xl">
               <div className="text-3xl">🔒</div>
               <h3 className="text-sm font-bold text-sell">Trade Entry Form Locked</h3>
               <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-                Check all 11 confluence items in the Confluence Gatekeeper above to unlock price entries, notes, and screenshots.
+                Check all 36 items in the pre-trade checklist above to unlock entries, screenshots, and logs.
               </p>
             </div>
           </div>
         )}
 
-        <div className={`transition-all duration-300 ${checklistScore < 11 ? 'opacity-30 pointer-events-none select-none' : ''}`}>
+        <div className={`transition-all duration-300 ${!isComplete ? 'opacity-20 pointer-events-none select-none' : ''}`}>
           <div className="grid grid-cols-3 gap-4">
         {/* Left Column - Main Fields */}
         <div className="col-span-2 space-y-4">
@@ -453,7 +907,7 @@ export default function NewTradePage() {
                 />
               </div>
               <div>
-                <label className="form-label">Entry Time *</label>
+                <label className="form-label">Entry Time (IST) *</label>
                 <input
                   type="time"
                   className="form-input"
@@ -468,10 +922,7 @@ export default function NewTradePage() {
                   value={form.session}
                   onChange={(e) => setForm({ ...form, session: e.target.value })}
                 >
-                  <option>London Open</option>
                   <option>NY Open</option>
-                  <option>NY Lunch</option>
-                  <option>Late NY</option>
                 </select>
               </div>
               <div>
@@ -516,8 +967,7 @@ export default function NewTradePage() {
                   onChange={(e) => setForm({ ...form, asset: e.target.value })}
                 >
                   <option value="XAUUSD">XAUUSD (Gold)</option>
-                  <option value="BTCUSD">BTCUSD</option>
-                  <option value="ETHUSD">ETHUSD</option>
+                  <option value="EURUSD">EURUSD</option>
                 </select>
               </div>
               <div>
@@ -571,7 +1021,7 @@ export default function NewTradePage() {
                 <label className="form-label">Entry *</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.00001"
                   className="form-input font-mono"
                   placeholder="0.00"
                   value={form.entryPrice}
@@ -582,7 +1032,7 @@ export default function NewTradePage() {
                 <label className="form-label">Stop Loss *</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.00001"
                   className="form-input font-mono"
                   placeholder="0.00"
                   value={form.stopLoss}
@@ -593,7 +1043,7 @@ export default function NewTradePage() {
                 <label className="form-label">TP1 *</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.00001"
                   className="form-input font-mono"
                   placeholder="0.00"
                   value={form.tp1}
@@ -601,10 +1051,10 @@ export default function NewTradePage() {
                 />
               </div>
               <div>
-                <label className="form-label">TP2 *</label>
+                <label className="form-label">TP2 (1:5 RR) *</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.00001"
                   className="form-input font-mono"
                   placeholder="0.00"
                   value={form.tp2}
@@ -615,7 +1065,7 @@ export default function NewTradePage() {
                 <label className="form-label">TP3</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.00001"
                   className="form-input font-mono"
                   placeholder="Optional"
                   value={form.tp3}
@@ -628,14 +1078,14 @@ export default function NewTradePage() {
             {entry > 0 && sl > 0 && (
               <div className="mt-4 grid grid-cols-4 gap-3">
                 <div className="bg-[var(--color-surface)] rounded-lg p-3 text-center">
-                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase">Risk</div>
+                  <div className="text-[10px] text-[var(--color-text-muted)] uppercase">SL size</div>
                   <div className="text-sm font-bold font-mono">
-                    {riskPips.toFixed(2)} pts
+                    {riskPips.toFixed(form.asset === 'EURUSD' ? 5 : 2)} pts
                   </div>
                 </div>
                 <div className="bg-[var(--color-surface)] rounded-lg p-3 text-center">
                   <div className="text-[10px] text-[var(--color-text-muted)] uppercase">RR to TP1</div>
-                  <div className={`text-sm font-bold font-mono ${rr1 >= 2 ? 'text-buy' : rr1 > 0 ? 'text-sell' : ''}`}>
+                  <div className={`text-sm font-bold font-mono ${rr1 >= 1.0 ? 'text-buy' : rr1 > 0 ? 'text-sell' : ''}`}>
                     1:{rr1.toFixed(2)}
                   </div>
                 </div>
@@ -647,7 +1097,7 @@ export default function NewTradePage() {
                 </div>
                 <div className="bg-[var(--color-surface)] rounded-lg p-3 text-center">
                   <div className="text-[10px] text-[var(--color-text-muted)] uppercase">Risk %</div>
-                  <div className="text-sm font-bold font-mono">1.50%</div>
+                  <div className="text-sm font-bold font-mono">1.00%</div>
                 </div>
               </div>
             )}
@@ -663,7 +1113,7 @@ export default function NewTradePage() {
                 <label className="form-label">Exit Price</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.00001"
                   className="form-input font-mono"
                   placeholder="0.00"
                   value={form.exitPrice}
@@ -778,7 +1228,6 @@ export default function NewTradePage() {
 
         {/* Right Column - Psychology */}
         <div className="space-y-4">
-
           {/* Emotion Before */}
           <div className="glass-card p-5">
             <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
@@ -887,7 +1336,7 @@ export default function NewTradePage() {
           </div>
         </div>
       </div>
-      </div>
+        </div>
       </div>
     </div>
   );

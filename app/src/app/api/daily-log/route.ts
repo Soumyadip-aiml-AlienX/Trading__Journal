@@ -179,7 +179,7 @@ export async function PATCH(request: NextRequest) {
       });
 
       // Send Discord/Telegram Notification
-      await sendNotification(`[MAVEN JOURNAL] Daily Reflection Completed!\n${summaryText}`);
+      await sendNotification(`[ALIENX JOURNAL] Daily Reflection Completed!\n${summaryText}`);
 
       // Sync to Notion
       try {

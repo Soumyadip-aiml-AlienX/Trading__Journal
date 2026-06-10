@@ -37,7 +37,7 @@ export async function generateDailyPDF(dateStr: string, trades: any[], dailyLog:
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('MAVEN TRADING JOURNAL', 14, 15);
+    doc.text('ALIENX TRADING JOURNAL', 14, 15);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -265,7 +265,7 @@ export async function generateDailyPDF(dateStr: string, trades: any[], dailyLog:
     }
 
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text(`${t.checklistScore}/11`, 140, 70);
+    doc.text(`${t.checklistScore}/36`, 140, 70);
 
     // Pre Reasoning & Post Notes
     doc.setFontSize(10);
@@ -350,7 +350,7 @@ export async function generateDailyPDF(dateStr: string, trades: any[], dailyLog:
   }
 
   // Save the PDF
-  doc.save(`MAVEN_JOURNAL_DAILY_${dateStr}.pdf`);
+  doc.save(`ALIENX_JOURNAL_DAILY_${dateStr}.pdf`);
 }
 
 export async function generateWeeklyPDF(startDateStr: string, endDateStr: string, trades: any[], dailyLogs: any[]) {
@@ -371,7 +371,7 @@ export async function generateWeeklyPDF(startDateStr: string, endDateStr: string
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('MAVEN TRADING JOURNAL', 14, 15);
+    doc.text('ALIENX TRADING JOURNAL', 14, 15);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -465,5 +465,5 @@ export async function generateWeeklyPDF(startDateStr: string, endDateStr: string
     });
   }
 
-  doc.save(`MAVEN_JOURNAL_WEEKLY_${startDateStr}_to_${endDateStr}.pdf`);
+  doc.save(`ALIENX_JOURNAL_WEEKLY_${startDateStr}_to_${endDateStr}.pdf`);
 }

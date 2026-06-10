@@ -5,14 +5,14 @@ import { useState } from 'react';
 export default function RiskMonitorPage() {
   const [calc, setCalc] = useState({
     accountBalance: '100000',
-    riskPct: '1.5',
+    riskPct: '1.0',
     entryPrice: '',
     stopLoss: '',
     asset: 'XAUUSD',
   });
 
   const balance = parseFloat(calc.accountBalance) || 0;
-  const riskPct = parseFloat(calc.riskPct) || 1.5;
+  const riskPct = parseFloat(calc.riskPct) || 1.0;
   const entry = parseFloat(calc.entryPrice) || 0;
   const sl = parseFloat(calc.stopLoss) || 0;
   const pips = Math.abs(entry - sl);
@@ -24,9 +24,9 @@ export default function RiskMonitorPage() {
     if (calc.asset === 'XAUUSD') {
       lots = dollarRisk / (pips * 100);
       unit = 'lots (troy oz)';
-    } else {
-      lots = dollarRisk / pips;
-      unit = calc.asset === 'BTCUSD' ? 'BTC' : 'ETH';
+    } else if (calc.asset === 'EURUSD') {
+      lots = dollarRisk / (pips * 100000);
+      unit = 'lots';
     }
   }
 
@@ -47,23 +47,19 @@ export default function RiskMonitorPage() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[var(--color-text-secondary)]">Risk per trade</span>
-              <span className="font-bold">1.5%</span>
+              <span className="font-bold">1.0%</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[var(--color-text-secondary)]">Minimum RR</span>
-              <span className="font-bold">1:2</span>
+              <span className="font-bold">1:1 (TP1) / 1:5 (TP2)</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[var(--color-text-secondary)]">Daily drawdown limit</span>
-              <span className="font-bold">4%</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-[var(--color-text-secondary)]">Overall drawdown limit</span>
-              <span className="font-bold">8%</span>
+              <span className="font-bold">2.0%</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[var(--color-text-secondary)]">Min checklist score</span>
-              <span className="font-bold">9/11</span>
+              <span className="font-bold">36/36</span>
             </div>
           </div>
         </div>
@@ -79,15 +75,15 @@ export default function RiskMonitorPage() {
             </div>
             <div className="flex items-start gap-2 text-[var(--color-text-secondary)]">
               <span className="text-buy mt-0.5">✓</span>
-              <span>Block trades if daily drawdown ≥ 2.5%</span>
+              <span>Block trades if daily drawdown ≥ 2.0%</span>
             </div>
             <div className="flex items-start gap-2 text-[var(--color-text-secondary)]">
               <span className="text-buy mt-0.5">✓</span>
-              <span>Block trades if RR &lt; 1:2</span>
+              <span>Block trades if TP1 RR &lt; 1:1</span>
             </div>
             <div className="flex items-start gap-2 text-[var(--color-text-secondary)]">
-              <span className="text-[var(--color-warning)] mt-0.5">⚠</span>
-              <span>Warn if checklist score &lt; 9/11</span>
+              <span className="text-[var(--color-warning)] mt-0.5">⚠️</span>
+              <span>Lock form if checklist score &lt; 36/36</span>
             </div>
           </div>
         </div>
@@ -126,8 +122,7 @@ export default function RiskMonitorPage() {
               onChange={(e) => setCalc({ ...calc, asset: e.target.value })}
             >
               <option value="XAUUSD">XAUUSD (Gold)</option>
-              <option value="BTCUSD">BTCUSD</option>
-              <option value="ETHUSD">ETHUSD</option>
+              <option value="EURUSD">EURUSD</option>
             </select>
           </div>
           <div>

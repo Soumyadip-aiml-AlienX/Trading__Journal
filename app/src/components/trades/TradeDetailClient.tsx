@@ -50,19 +50,102 @@ interface Trade {
   status: string;
 }
 
-const CHECKLIST_ITEMS = [
-  '15M trend identified (BOS confirmed)',
-  'Valid Order Block marked on 15M',
-  'Price returned to OB zone',
-  'Inside Killzone session window',
-  '5M entry trigger confirmed (FVG/BOS/OTE)',
-  'Liquidity grab visible before reversal',
-  'No red news within 30 minutes',
-  'Risk set to 1.5%',
-  'SL placed correctly below/above OB',
-  'TP1 and TP2 marked on chart',
-  'RR minimum 1:2 confirmed',
+const GROUPS = [
+  {
+    badge: 'PRE-SESSION',
+    steps: [
+      { num: 1, title: 'Confirm it is NY Open session: 5:30 PM – 7:30 PM IST', path: undefined },
+      { num: 2, title: 'Select the asset to analyse: XAUUSD or EURUSD', path: undefined },
+      { num: 3, title: 'Check Forex Factory: no red news within 30 minutes of current IST time', path: undefined },
+      { num: 4, title: 'Confirm: daily drawdown below 2% AND trades taken today below 2', path: undefined },
+    ]
+  },
+  {
+    badge: '1H',
+    steps: [
+      { num: 5, title: 'Open the 1H chart for the selected asset', path: undefined },
+      { num: 6, title: 'Identify the most recent 1H Break of Structure (BOS)', path: undefined },
+      { num: 7, title: 'Confirm and record the bias: BULLISH or BEARISH', path: undefined },
+    ]
+  },
+  {
+    badge: '1H',
+    steps: [
+      { num: 8, title: "Mark the most recent 1H Swing High — label '1H Swing High'", path: undefined },
+      { num: 9, title: "Mark the most recent 1H Swing Low — label '1H Swing Low'", path: undefined },
+      { num: 10, title: 'Note which liquidity level institutions will target first', path: undefined },
+    ]
+  },
+  {
+    badge: '15M',
+    steps: [
+      { num: 11, title: 'Switch to 15M chart', path: undefined },
+      { num: 12, title: "Mark most recent 15M Swing High — label '15M Swing High'", path: undefined },
+      { num: 13, title: "Mark most recent 15M Swing Low — label '15M Swing Low'", path: undefined },
+      { num: 14, title: 'Confirm 15M structure agrees with 1H bias', path: undefined },
+    ]
+  },
+  {
+    badge: '15M',
+    steps: [
+      { num: 15, title: 'Focus on the 15M Swing Low area', path: 'bullish' },
+      { num: 16, title: 'Search for Bullish Order Block in the swing low area', path: 'bullish' },
+      { num: 17, title: 'Search for Bullish FVG in the swing low area', path: 'bullish' },
+      { num: 18, title: 'If both exist: select the one closest to price as active zone', path: 'bullish' },
+      { num: 19, title: 'Note if OB and FVG overlap', path: 'bullish' },
+      { num: 15, title: 'Focus on the 15M Swing High area', path: 'bearish' },
+      { num: 16, title: 'Search for Bearish Order Block in the swing high area', path: 'bearish' },
+      { num: 17, title: 'Search for Bearish FVG in the swing high area', path: 'bearish' },
+      { num: 18, title: 'If both exist: select the one closest to price as active zone', path: 'bearish' },
+      { num: 19, title: 'Note if OB and FVG overlap', path: 'bearish' },
+    ]
+  },
+  {
+    badge: '15M',
+    steps: [
+      { num: 20, title: 'Draw shaded rectangle over the active OB or FVG zone on 15M', path: undefined },
+      { num: 21, title: 'Set price alert at entry edge of the zone', path: undefined },
+      { num: 22, title: 'Wait — do not act until price reaches the zone', path: undefined },
+      { num: 23, title: 'Price entered zone — confirm visible reaction', path: undefined },
+    ]
+  },
+  {
+    badge: '1M',
+    steps: [
+      { num: 24, title: 'Switch to 1M chart ONLY after price enters and reacts inside zone', path: undefined },
+      { num: 25, title: 'Identify the most recent minor 1M swing level in trade direction', path: undefined },
+      { num: 26, title: 'Wait for the FIRST 1M candle BODY to close beyond the swing level', path: undefined },
+      { num: 27, title: 'Wait for the SECOND consecutive 1M candle BODY to also close', path: undefined },
+      { num: 28, title: 'Confirmed: two consecutive 1M body closes in trade direction', path: undefined },
+    ]
+  },
+  {
+    badge: 'ENTRY',
+    steps: [
+      { num: 29, title: 'Final confirmation: all prior steps verified', path: undefined },
+      { num: 30, title: 'Enter at market on close of second confirming 1M candle', path: undefined },
+      { num: 31, title: 'Place SL behind full zone with buffer', path: undefined },
+      { num: 32, title: 'Verify risk is exactly 1% of account — set position size', path: undefined },
+      { num: 33, title: 'Set TP1 at 1:1 RR', path: undefined },
+      { num: 34, title: 'Set TP2 at exactly 1:5 RR', path: undefined },
+      { num: 35, title: 'Screenshot: 1H, 15M and 1M chart with levels', path: undefined },
+      { num: 36, title: 'Log trade in journal with exact IST entry time', path: undefined },
+    ]
+  }
 ];
+
+const getChecklistNames = (direction: 'BUY' | 'SELL') => {
+  const names: string[] = [];
+  const biasPath = direction === 'BUY' ? 'bullish' : 'bearish';
+  GROUPS.forEach(group => {
+    group.steps.forEach(step => {
+      if (!step.path || step.path === biasPath) {
+        names.push(`Step ${step.num} [${group.badge}]: ${step.title}`);
+      }
+    });
+  });
+  return names;
+};
 
 const EMOTIONS = ['Confident', 'Anxious', 'FOMO', 'Patient', 'Greedy', 'Uncertain', 'Calm'];
 
@@ -662,13 +745,13 @@ export default function TradeDetailPage({ params }: { params: Promise<{ id: stri
           <div className="glass-card p-5">
             <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-4 flex justify-between items-center">
               <span>SMC Confluences</span>
-              <span className={`text-sm font-bold ${trade.checklistScore >= 9 ? 'text-buy' : 'text-sell'}`}>
-                {trade.checklistScore}/11
+              <span className={`text-sm font-bold ${trade.checklistScore === 36 ? 'text-buy' : 'text-sell'}`}>
+                {trade.checklistScore}/36
               </span>
             </h3>
             
             <div className="space-y-1">
-              {CHECKLIST_ITEMS.map((item, i) => (
+              {getChecklistNames(trade.direction).map((item, i) => (
                 <div key={i} className="flex items-center gap-2 py-1 text-xs">
                   <span className={`text-sm ${parsedChecklistItems[i] ? 'text-buy' : 'text-[var(--color-text-muted)]'}`}>
                     {parsedChecklistItems[i] ? '✓' : '✗'}

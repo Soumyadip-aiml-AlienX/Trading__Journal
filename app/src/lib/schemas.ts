@@ -16,7 +16,7 @@ export const TradeInputSchema = z.object({
   tp3: z.number().positive().nullable().optional(),
   exitPrice: z.number().positive().nullable().optional(),
   exitReason: z.string().nullable().optional(),
-  checklistScore: z.number().min(0).max(11).optional().default(0),
+  checklistScore: z.number().min(0).max(36).optional().default(0),
   checklistItems: z.array(z.boolean()).optional().default([]),
   preReasoning: z.string().optional().default(''),
   postNotes: z.string().nullable().optional(),

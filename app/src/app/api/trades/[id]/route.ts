@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     try {
       if (status === 'closed' && actualPnlPct !== null) {
         const resultEmoji = actualPnlPct >= 0 ? '🏆' : '🚨';
-        const notificationMessage = `[MAVEN JOURNAL] ${resultEmoji} Trade Closed: ${trade.tradeCode} (${trade.asset} ${trade.direction}) | Result: ${actualPnlPct >= 0 ? '+' : ''}${actualPnlPct.toFixed(2)}% | Exit Price: ${trade.exitPrice} | Reason: ${trade.exitReason}`;
+        const notificationMessage = `[ALIENX JOURNAL] ${resultEmoji} Trade Closed: ${trade.tradeCode} (${trade.asset} ${trade.direction}) | Result: ${actualPnlPct >= 0 ? '+' : ''}${actualPnlPct.toFixed(2)}% | Exit Price: ${trade.exitPrice} | Reason: ${trade.exitReason}`;
         await sendNotification(notificationMessage, user.id);
 
         // Check daily drawdown
@@ -148,7 +148,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         });
         const dailyPnl = todayTrades.reduce((sum, t) => sum + (t.actualPnlPct ?? 0), 0);
         if (dailyPnl <= -2.0) {
-          await sendNotification(`[MAVEN JOURNAL] ⚠️ DRAWDOWN ALERT: Daily P&L is currently ${dailyPnl.toFixed(2)}%! Please check your daily limits.`, user.id);
+          await sendNotification(`[ALIENX JOURNAL] ⚠️ DRAWDOWN ALERT: Daily P&L is currently ${dailyPnl.toFixed(2)}%! Please check your daily limits.`, user.id);
         }
       }
     } catch (err) {

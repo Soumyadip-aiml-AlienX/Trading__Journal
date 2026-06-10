@@ -142,7 +142,7 @@ export default function ReflectionPage() {
             <div>
               <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-semibold">Avg Setup Score</span>
               <p className="text-lg font-bold text-white">
-                {(todayTrades.reduce((sum, t) => sum + t.checklistScore, 0) / todayTrades.length).toFixed(1)}/11
+                {(todayTrades.reduce((sum, t) => sum + t.checklistScore, 0) / todayTrades.length).toFixed(1)}/36
               </p>
             </div>
           </div>
