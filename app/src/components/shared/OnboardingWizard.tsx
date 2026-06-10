@@ -5,9 +5,10 @@ import { useToast } from '@/components/shared/Toast';
 
 interface OnboardingWizardProps {
   onComplete: () => void;
+  onSkip?: () => void;
 }
 
-export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizardProps) {
   const toast = useToast();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -160,7 +161,34 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <div className="space-y-1">
           <div className="flex justify-between text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
             <span>Setup Journal</span>
-            <span>Step {step} of 5</span>
+            <div className="flex items-center gap-3">
+              <span>Step {step} of 5</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  // Skip entire setup — save defaults and mark onboarding done
+                  try {
+                    await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        accountSize: 100000,
+                        currentPhase: 'Phase 1',
+                        riskPerTrade: 1,
+                        maxTradesPerDay: 2,
+                      }),
+                    });
+                  } catch {}
+                  localStorage.removeItem('onboarding_step');
+                  localStorage.removeItem('onboarding_form');
+                  if (onSkip) onSkip();
+                  else onComplete();
+                }}
+                className="text-slate-500 hover:text-white text-[10px] transition-colors cursor-pointer underline underline-offset-2"
+              >
+                Skip Setup
+              </button>
+            </div>
           </div>
           <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden">
             <div
