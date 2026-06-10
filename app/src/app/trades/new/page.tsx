@@ -1,174 +1,104 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { calculateRR, calculateRiskPips } from '@/lib/calculations';
 import ScreenshotUploader from '@/components/trades/ScreenshotUploader';
 import TradingViewChart, { getTradingViewUrl } from '@/components/shared/TradingViewChart';
 import { useToast } from '@/components/shared/Toast';
 
-interface GroupDefinition {
+interface ChecklistItem {
   id: number;
+  points: number;
   title: string;
-  badge: 'PRE-SESSION' | '1H' | '15M' | '1M' | 'ENTRY';
-  bgClass: string;
-  borderClass: string;
-  warning?: string;
-  skipCondition?: {
-    text: string;
-    reason: string;
-  };
-  steps: {
-    num: number;
-    title: string;
-    note: string;
-    type: 'required' | 'mark' | 'observe' | 'wait';
-    path?: 'bullish' | 'bearish';
-  }[];
+  note: string;
+  badge: string;
+  badgeColor: 'blue' | 'amber';
 }
 
-const GROUPS: GroupDefinition[] = [
+const CHECKLIST_ITEMS: ChecklistItem[] = [
   {
     id: 1,
-    title: 'Group 1: PRE-SESSION',
-    badge: 'PRE-SESSION',
-    bgClass: 'bg-slate-900/90 text-slate-200',
-    borderClass: 'border-slate-800',
-    warning: 'All times shown in IST (UTC+5:30). NY Open = 5:30 PM – 7:30 PM IST.',
-    steps: [
-      { num: 1, title: 'Confirm it is NY Open session: 5:30 PM – 7:30 PM IST', note: 'Do not open charts before 5:30 PM IST. If past 7:15 PM IST — skip the session.', type: 'required' },
-      { num: 2, title: 'Select the asset to analyse: XAUUSD or EURUSD', note: 'Analyse one asset at a time. Complete full checklist before switching to the second asset.', type: 'required' },
-      { num: 3, title: 'Check Forex Factory: no red news within 30 minutes of current IST time', note: 'Convert all news times to IST. If red news due within 30 min — wait and resume 30 min after release.', type: 'required' },
-      { num: 4, title: 'Confirm: daily drawdown below 2% AND trades taken today below 2', note: 'Two losses = 2% daily loss = session over. If either limit is hit — close charts immediately.', type: 'required' },
-    ]
+    points: 1,
+    title: 'NY Open session is active: 5:30 PM – 7:30 PM IST',
+    note: 'Do not trade before 5:30 PM IST. If past 7:15 PM IST — skip the session.',
+    badge: '1 pt',
+    badgeColor: 'blue'
   },
   {
     id: 2,
-    title: 'Group 2: 1H CHART — ESTABLISH BIAS',
-    badge: '1H',
-    bgClass: 'bg-blue-950/90 text-blue-200',
-    borderClass: 'border-blue-900',
-    skipCondition: {
-      text: 'No clear 1H BOS — bias ambiguous',
-      reason: 'No clear 1H BOS — bias ambiguous. Skip asset for the entire session.'
-    },
-    steps: [
-      { num: 5, title: 'Open the 1H chart for the selected asset', note: 'Top-down analysis starts here. Do not look at 15M or 1M yet.', type: 'required' },
-      { num: 6, title: 'Identify the most recent 1H Break of Structure (BOS)', note: 'HH + HL + upside BOS = Bullish · LH + LL + downside BOS = Bearish', type: 'required' },
-      { num: 7, title: 'Confirm and record the bias: BULLISH or BEARISH', note: 'No clear BOS or choppy price action = no bias. Skip this asset for the session.', type: 'required' },
-    ]
+    points: 1,
+    title: 'No red news event within 30 minutes (Forex Factory — IST times)',
+    note: 'Convert all news times to IST. Wait 30 min after any red release before trading.',
+    badge: '1 pt',
+    badgeColor: 'blue'
   },
   {
     id: 3,
-    title: 'Group 3: 1H CHART — MARK SWING LEVELS',
-    badge: '1H',
-    bgClass: 'bg-blue-950/90 text-blue-200',
-    borderClass: 'border-blue-900',
-    steps: [
-      { num: 8, title: "Mark the most recent 1H Swing High — label '1H Swing High'", note: 'Buy stop liquidity above this. Bearish bias: institutions target this level first.', type: 'mark' },
-      { num: 9, title: "Mark the most recent 1H Swing Low — label '1H Swing Low'", note: 'Sell stop liquidity below this. Bullish bias: institutions target this level first.', type: 'mark' },
-      { num: 10, title: 'Note which liquidity level institutions will target first', note: 'Bullish: sweep of 1H Swing Low before moving up · Bearish: sweep of 1H Swing High before moving down.', type: 'observe' },
-    ]
+    points: 1,
+    title: 'Account OK: daily loss below 2% and fewer than 2 trades taken today',
+    note: 'Two 1% losses = daily stop. If hit — close charts, no more trading today.',
+    badge: '1 pt',
+    badgeColor: 'blue'
   },
   {
     id: 4,
-    title: 'Group 4: 15M CHART — REFINE STRUCTURE',
-    badge: '15M',
-    bgClass: 'bg-emerald-950/90 text-emerald-200',
-    borderClass: 'border-emerald-900',
-    skipCondition: {
-      text: '15M structure conflicts with 1H bias',
-      reason: '15M structure conflicts with 1H bias. Skip this asset.'
-    },
-    steps: [
-      { num: 11, title: 'Switch to 15M chart', note: '1H bias is absolute filter. 15M must agree with it.', type: 'required' },
-      { num: 12, title: "Mark most recent 15M Swing High — label '15M Swing High'", note: 'Refined structural level within the 1H direction.', type: 'mark' },
-      { num: 13, title: "Mark most recent 15M Swing Low — label '15M Swing Low'", note: 'Bullish: OB/FVG forms near this swing low · Bearish: OB/FVG forms near the swing high.', type: 'mark' },
-      { num: 14, title: 'Confirm 15M structure agrees with 1H bias', note: 'Opposing 15M structure = skip this asset immediately.', type: 'required' },
-    ]
+    points: 2,
+    title: '1H bias confirmed — clear Break of Structure identified (bullish or bearish)',
+    note: 'HH + HL + upside BOS = bullish · LH + LL + downside BOS = bearish · No BOS = skip.',
+    badge: '2 pts',
+    badgeColor: 'amber'
   },
   {
     id: 5,
-    title: 'Group 5: 15M — FIND ZONE',
-    badge: '15M',
-    bgClass: 'bg-emerald-950/90 text-emerald-200',
-    borderClass: 'border-emerald-900',
-    skipCondition: {
-      text: 'No OB or FVG in swing area',
-      reason: 'No OB or FVG in 15M swing area. Skip this asset for the session.'
-    },
-    steps: [
-      // Bullish path steps
-      { num: 15, title: 'Focus on the 15M Swing Low area', note: 'Bullish setups form in discount zones — institutions buy at swing low area.', type: 'required', path: 'bullish' },
-      { num: 16, title: 'Search for Bullish Order Block in the swing low area', note: 'Last bearish candle before a bullish BOS. Mark high and low of that candle.', type: 'mark', path: 'bullish' },
-      { num: 17, title: 'Search for Bullish FVG in the swing low area', note: '3-candle upward imbalance — gap between candle 1 high and candle 3 low.', type: 'mark', path: 'bullish' },
-      { num: 18, title: "If both exist: select the one closest to current price as the active zone", note: "Closest zone = highest probability. Label it 'ACTIVE ZONE — BUY'.", type: 'required', path: 'bullish' },
-      { num: 19, title: 'Note if OB and FVG overlap — highest confluence zone', note: 'Overlap = two institutional reasons to buy at the same level. Strongest setup.', type: 'observe', path: 'bullish' },
-      
-      // Bearish path steps
-      { num: 15, title: 'Focus on the 15M Swing High area', note: 'Bearish setups form in premium zones — institutions sell at swing high area.', type: 'required', path: 'bearish' },
-      { num: 16, title: 'Search for Bearish Order Block in the swing high area', note: 'Last bullish candle before a bearish BOS. Mark high and low of that candle.', type: 'mark', path: 'bearish' },
-      { num: 17, title: 'Search for Bearish FVG in the swing high area', note: '3-candle downward imbalance — gap between candle 1 low and candle 3 high.', type: 'mark', path: 'bearish' },
-      { num: 18, title: "If both exist: select the one closest to current price as the active zone", note: "Closest zone = highest probability. Label it 'ACTIVE ZONE — SELL'.", type: 'required', path: 'bearish' },
-      { num: 19, title: 'Note if OB and FVG overlap — highest confluence zone', note: 'Overlap = two institutional reasons to sell at the same level.', type: 'observe', path: 'bearish' },
-    ]
+    points: 1,
+    title: '1H swing high and swing low marked on the chart',
+    note: "Label '1H Swing High' (buy stops above) and '1H Swing Low' (sell stops below).",
+    badge: '1 pt',
+    badgeColor: 'blue'
   },
   {
     id: 6,
-    title: 'Group 6: 15M — MARK ZONE AND WAIT',
-    badge: '15M',
-    bgClass: 'bg-emerald-950/90 text-emerald-200',
-    borderClass: 'border-emerald-900',
-    warning: 'Session closes 7:30 PM IST. If price not at zone by 7:15 PM IST — skip trade. Never chase after Killzone ends.',
-    skipCondition: {
-      text: 'Price closed through zone with no reaction',
-      reason: 'Price closed through zone with no reaction — invalidated. Wait for next session.'
-    },
-    steps: [
-      { num: 20, title: 'Draw shaded rectangle over the active OB or FVG zone on 15M', note: "Bullish: label 'BUY ZONE' · Bearish: label 'SELL ZONE'.", type: 'mark' },
-      { num: 21, title: 'Set price alert at entry edge of the zone', note: 'Bullish: alert at zone top · Bearish: alert at zone bottom.', type: 'required' },
-      { num: 22, title: 'Wait — do not act until price reaches the zone', note: 'Step away from chart. Alert will notify you.', type: 'wait' },
-      { num: 23, title: 'Price entered zone — confirm visible reaction (no full body close-through)', note: 'Full candle body through far edge = zone invalidated. Wicks through are acceptable.', type: 'required' },
-    ]
+    points: 1,
+    title: '15M structure confirmed and aligns with the 1H bias',
+    note: 'Mark 15M swing high and low. Opposing 15M structure = skip this asset.',
+    badge: '1 pt',
+    badgeColor: 'blue'
   },
   {
     id: 7,
-    title: 'Group 7: 1M CHART — WAIT FOR BIAS CHANGE',
-    badge: '1M',
-    bgClass: 'bg-rose-950/90 text-rose-200',
-    borderClass: 'border-rose-900',
-    warning: 'If 1M confirmation takes price far into zone — recheck SL is within 1% risk. If too wide — skip trade.',
-    skipCondition: {
-      text: 'Two consecutive 1M body closes did not appear inside zone',
-      reason: 'Two consecutive 1M body closes did not appear inside the zone. Price exited — skip.'
-    },
-    steps: [
-      { num: 24, title: 'Switch to 1M chart ONLY after price enters and reacts inside the 15M zone', note: 'Never open 1M before price reaches the zone.', type: 'required' },
-      { num: 25, title: 'Identify the most recent minor 1M swing level in the trade direction', note: 'Bullish: minor 1M swing high to break upward · Bearish: minor 1M swing low to break downward.', type: 'mark' },
-      { num: 26, title: 'Wait for the FIRST 1M candle BODY to close beyond the swing level in trade direction', note: 'Body close counts. Wick-only close does NOT count.', type: 'wait' },
-      { num: 27, title: 'Wait for the SECOND consecutive 1M candle BODY to also close in trade direction', note: 'Both bodies must close consecutively in trade direction. This confirms the 1M bias change.', type: 'required' },
-      { num: 28, title: 'Confirmed: two consecutive 1M body closes in trade direction inside or adjacent to zone', note: 'This is the entry trigger. If price exits zone before trigger — invalidate and skip.', type: 'required' },
-    ]
+    points: 2,
+    title: 'Valid OB or FVG found in the correct zone',
+    note: 'Bullish bias → find OB or FVG in the 15M swing LOW area (discount zone). Bearish bias → find OB or FVG in the 15M swing HIGH area (premium zone). If both OB and FVG exist → select the one closest to current price. If neither found → skip this asset.',
+    badge: '2 pts',
+    badgeColor: 'amber'
   },
   {
     id: 8,
-    title: 'Group 8: ENTRY',
-    badge: 'ENTRY',
-    bgClass: 'bg-amber-950/90 text-amber-200',
-    borderClass: 'border-amber-900',
-    warning: 'After entry — step away. Do not move SL. Do not close early. Let the 1:5 RR work.',
-    steps: [
-      { num: 29, title: 'Final confirmation: all prior steps verified', note: 'Pre-session ✓ · 1H bias ✓ · 1H levels ✓ · 15M structure ✓ · zone ✓ · zone reacted ✓ · 1M two-candle BOS ✓', type: 'required' },
-      { num: 30, title: 'Enter at market on close of second confirming 1M candle', note: 'Alternative: limit at 1M BOS retest for better price (only if price has not moved far from zone).', type: 'required' },
-      { num: 31, title: 'Place SL behind full zone with buffer (Gold: 2–3 pips · EURUSD: 1–2 pips)', note: 'Bullish: SL below lowest wick · Bearish: SL above highest wick. Never inside the zone.', type: 'required' },
-      { num: 32, title: 'Verify risk is exactly 1% of account — calculate and set position size', note: 'Risk Amount = Account × 1% · Lot Size = Risk Amount ÷ (SL pips × pip value). Never round up.', type: 'required' },
-      { num: 33, title: 'Set TP1 at 1:1 RR — same distance as SL from entry', note: 'At TP1: close 50% immediately + move SL to breakeven. Trade is now risk-free. If TP1 cannot give 1:1 RR due to structure — this setup is invalid. Do not enter.', type: 'required' },
-      { num: 34, title: 'Set TP2 at exactly 1:5 RR — five times the SL distance from entry', note: 'Example: SL = 20 pips → TP2 = 100 pips from entry. Fixed target. Do not close early. Do not move TP2.', type: 'required' },
-      { num: 35, title: 'Screenshot: 1H with bias marked · 15M with zone marked · 1M with BOS marked', note: 'Three screenshots minimum. Take before doing anything else.', type: 'required' },
-      { num: 36, title: "Log trade in journal: asset · bias · direction · entry · SL · TP1 · TP2 · zone type · IST entry time", note: "Log at entry. Record exact IST time. Do not log after close — accuracy matters. (AND IT IS NOT MAVEN TRADING JOURNAL IT IS - 'AlienX Trading Journal'", type: 'required' },
-    ]
+    points: 1,
+    title: 'Price has reached the zone with a visible reaction (no full body close-through)',
+    note: 'Full candle body through the far edge = zone invalidated. Wicks through are acceptable.',
+    badge: '1 pt',
+    badgeColor: 'blue'
+  },
+  {
+    id: 9,
+    points: 2,
+    title: '1M bias change confirmed: two consecutive 1M candle bodies closed in trade direction',
+    note: 'Wick-only closes do not count. Both bodies must close consecutively — this is the entry trigger.',
+    badge: '2 pts',
+    badgeColor: 'amber'
+  },
+  {
+    id: 10,
+    points: 1,
+    title: 'Risk confirmed: SL behind zone with buffer, position sized to exactly 1% of account',
+    note: 'XAUUSD: 2–3 pip buffer · EURUSD: 1–2 pip buffer · Lot size = Risk ÷ (SL pips × pip value).',
+    badge: '1 pt',
+    badgeColor: 'blue'
   }
 ];
+
 
 const EMOTIONS = [
   'Confident',
@@ -245,7 +175,7 @@ export default function NewTradePage() {
     tp3: '',
     exitPrice: '',
     exitReason: '',
-    checklistItems: new Array(36).fill(false),
+    checklistItems: new Array(10).fill(false),
     preReasoning: '',
     postNotes: '',
     mistakes: '',
@@ -272,7 +202,7 @@ export default function NewTradePage() {
   const [skipped, setSkipped] = useState(false);
   const [skipReason, setSkipReason] = useState('');
   const [completionTimeIST, setCompletionTimeIST] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<number, boolean>>({});
+  const [formUnlocked, setFormUnlocked] = useState(false);
 
   useEffect(() => {
     async function checkAlerts() {
@@ -325,7 +255,7 @@ export default function NewTradePage() {
     if (storedItems) {
       try {
         const parsed = JSON.parse(storedItems);
-        if (Array.isArray(parsed) && parsed.length === 36) {
+        if (Array.isArray(parsed) && parsed.length === 10) {
           setForm(prev => ({ ...prev, checklistItems: parsed }));
         }
       } catch {}
@@ -377,57 +307,51 @@ export default function NewTradePage() {
     }));
   };
 
-  // Filter groups and steps by selected bias path
-  const getActiveSteps = () => {
-    const steps: any[] = [];
-    const biasPath = form.direction === 'BUY' ? 'bullish' : 'bearish';
-    GROUPS.forEach(group => {
-      group.steps.forEach(step => {
-        if (!step.path || step.path === biasPath) {
-          steps.push({
-            ...step,
-            groupTitle: group.title,
-            groupBadge: group.badge,
-            groupId: group.id,
-          });
-        }
-      });
-    });
-    return steps;
+  const getChecklistScore = (items: boolean[]) => {
+    const points = [1, 1, 1, 2, 1, 1, 2, 1, 2, 1];
+    return items.reduce((sum, checked, idx) => sum + (checked ? points[idx] : 0), 0);
   };
 
-  const activeSteps = getActiveSteps();
-  const checklistScore = form.checklistItems.filter(Boolean).length;
-  const isComplete = checklistScore === 36;
+  const checklistScore = getChecklistScore(form.checklistItems);
+  const isComplete = checklistScore >= 9 && formUnlocked;
+
+  // Automatically lock the form if score drops below 9
+  useEffect(() => {
+    if (checklistScore < 9) {
+      setFormUnlocked(false);
+    }
+  }, [checklistScore]);
 
   // Checklist interaction handlers
-  const handleCheckChange = (index: number, checked: boolean) => {
-    const newItems = [...form.checklistItems];
-    if (checked) {
-      newItems[index] = true;
-      if (index === 0 && !sessionStartTime) {
+  const handleCheckChange = useCallback((index: number, checked: boolean) => {
+    setForm(prev => {
+      const newItems = [...prev.checklistItems];
+      newItems[index] = checked;
+      
+      // Start session timer if this is the first checkbox checked
+      const isFirstCheck = checked && !prev.checklistItems.some(Boolean) && !sessionStartTime;
+      if (isFirstCheck) {
         const now = Date.now();
         setSessionStartTime(now);
         localStorage.setItem('alienx_session_start_time', now.toString());
       }
-      if (index === 35) {
-        const istStr = new Date().toLocaleTimeString('en-US', {
-          timeZone: 'Asia/Kolkata',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        });
-        setCompletionTimeIST(istStr);
-        localStorage.setItem('alienx_completion_time_ist', istStr);
-        setForm(prev => ({ ...prev, entryTime: istStr }));
-      }
-    } else {
-      // Uncheck this step and all subsequent steps
-      for (let k = index; k < 36; k++) {
-        newItems[k] = false;
-      }
+      return { ...prev, checklistItems: newItems };
+    });
+  }, [sessionStartTime]);
+
+  const handleOpenTradeEntry = () => {
+    setFormUnlocked(true);
+    if (!completionTimeIST) {
+      const istStr = new Date().toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      setCompletionTimeIST(istStr);
+      localStorage.setItem('alienx_completion_time_ist', istStr);
+      setForm(prev => ({ ...prev, entryTime: istStr }));
     }
-    setForm(prev => ({ ...prev, checklistItems: newItems }));
   };
 
   const handleTriggerSkip = (reason: string) => {
@@ -450,9 +374,10 @@ export default function NewTradePage() {
     setSkipped(false);
     setSkipReason('');
     setCompletionTimeIST('');
+    setFormUnlocked(false);
     setForm(prev => ({
       ...prev,
-      checklistItems: new Array(36).fill(false),
+      checklistItems: new Array(10).fill(false),
       entryPrice: '',
       stopLoss: '',
       tp1: '',
@@ -465,15 +390,11 @@ export default function NewTradePage() {
   const handleBiasChange = (newBias: 'BULLISH' | 'BEARISH') => {
     const newDirection = newBias === 'BULLISH' ? 'BUY' : 'SELL';
     const newItems = [...form.checklistItems];
-    // Reset steps from Step 7 (index 6) onwards
-    for (let k = 6; k < 36; k++) {
+    // Reset steps from Step 7 (index 6) onwards (since item 7 is index 6)
+    for (let k = 6; k < 10; k++) {
       newItems[k] = false;
     }
     setForm(prev => ({ ...prev, direction: newDirection, checklistItems: newItems }));
-  };
-
-  const toggleGroupCollapse = (groupId: number) => {
-    setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
   // Position Sizing Lot Calculations
@@ -520,12 +441,11 @@ export default function NewTradePage() {
   };
 
   const getZoneType = () => {
-    // OB: Step 16 (index 15), FVG: Step 17 (index 16)
-    const obChecked = form.checklistItems[15];
-    const fvgChecked = form.checklistItems[16];
-    if (obChecked && fvgChecked) return 'OB + FVG Overlap';
-    if (obChecked) return 'Order Block (OB)';
-    if (fvgChecked) return 'Fair Value Gap (FVG)';
+    const obSelected = form.setupTypes.includes('Order Block');
+    const fvgSelected = form.setupTypes.includes('FVG');
+    if (obSelected && fvgSelected) return 'OB + FVG Overlap';
+    if (obSelected) return 'Order Block (OB)';
+    if (fvgSelected) return 'Fair Value Gap (FVG)';
     return 'OB or FVG Zone';
   };
 
@@ -546,7 +466,7 @@ export default function NewTradePage() {
     return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
   };
 
-  const scoreColor = isComplete ? 'text-buy' : 'text-slate-400';
+  const scoreColor = checklistScore >= 9 ? 'text-buy' : checklistScore >= 6 ? 'text-warn' : 'text-sell';
 
   const toggleSetup = (setup: string) => {
     setForm((prev) => ({
@@ -567,8 +487,8 @@ export default function NewTradePage() {
   };
 
   const handleSubmit = async () => {
-    if (!isComplete) {
-      toast.warning('Trade Entry Blocked: All 36 checklist items must be checked.');
+    if (checklistScore < 9) {
+      toast.warning('Trade Entry Blocked: Score must be at least 9 points to unlock.');
       return;
     }
 
@@ -683,123 +603,118 @@ export default function NewTradePage() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Pre-Trade Checklist Progress</h2>
-            <p className="text-[11px] text-[var(--color-text-muted)]">Perform top-down checklist verification in sequence to unlock trade logs.</p>
+            <p className="text-[11px] text-[var(--color-text-muted)]">Verify checklist criteria to score points and unlock trade logs.</p>
           </div>
           <span className={`text-xl font-bold font-mono ${scoreColor}`}>
-            {checklistScore} / 36
+            {checklistScore} / 13
           </span>
         </div>
         
         {/* Progress Bar */}
         <div className="w-full bg-[var(--color-navy)] h-2 rounded-full overflow-hidden border border-[var(--color-border)] shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
           <div
-            className={`h-full transition-all duration-300 ${isComplete ? 'bg-buy shadow-[0_0_8px_rgba(29,158,117,0.5)]' : 'bg-[var(--color-accent)]'}`}
-            style={{ width: `${(checklistScore / 36) * 100}%` }}
+            className={`h-full transition-all duration-300 ${
+              checklistScore >= 9 
+                ? 'bg-buy shadow-[0_0_8px_rgba(29,158,117,0.5)]' 
+                : checklistScore >= 6 
+                ? 'bg-[var(--color-warning)]' 
+                : 'bg-danger'
+            }`}
+            style={{ width: `${(checklistScore / 13) * 100}%` }}
           />
         </div>
       </div>
 
+      {/* Lock/Unlock Gatekeeper Box */}
+      <div className={`p-4 rounded-xl border transition-all duration-500 flex flex-col sm:flex-row items-center justify-between gap-4 ${
+        checklistScore >= 9
+          ? 'bg-buy/10 border-buy border-opacity-40 shadow-lg shadow-buy/5'
+          : 'bg-[var(--color-surface)]/60 border-[var(--color-border)]'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${
+            checklistScore >= 9 ? 'bg-buy text-white scale-110' : 'bg-slate-800 text-[var(--color-text-muted)]'
+          }`}>
+            {checklistScore >= 9 ? (
+              <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+            )}
+          </div>
+          <div>
+            <h3 className={`text-xs font-bold ${checklistScore >= 9 ? 'text-buy' : 'text-[var(--color-text-muted)]'}`}>
+              {checklistScore >= 9 ? 'TRADE ENTRY UNLOCKED' : 'TRADE ENTRY LOCKED'}
+            </h3>
+            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 font-medium">
+              {checklistScore >= 9
+                ? 'trade entry unlocked'
+                : `${9 - checklistScore} more points needed — do not open trade entry`}
+            </p>
+          </div>
+        </div>
+        
+        <button
+          type="button"
+          disabled={checklistScore < 9}
+          onClick={handleOpenTradeEntry}
+          className={`px-6 py-2 rounded-lg font-bold text-xs transition-all duration-300 ${
+            checklistScore >= 9
+              ? 'bg-buy text-white hover:bg-buy-light shadow-lg shadow-buy/20 cursor-pointer'
+              : 'bg-slate-800 text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+          }`}
+        >
+          {formUnlocked ? '🔓 Trade Entry Opened' : '🔒 Open Trade Entry'}
+        </button>
+      </div>
+
       {/* Main Checklist */}
-      <div className="space-y-4">
-        {GROUPS.map((group) => {
-          // Filter steps in group
-          const biasPath = form.direction === 'BUY' ? 'bullish' : 'bearish';
-          const groupSteps = group.steps.filter(step => !step.path || step.path === biasPath);
-          if (groupSteps.length === 0) return null;
-
-          // Find the indexes of these steps in the active list
-          const firstStepActiveIndex = activeSteps.findIndex(s => s.groupId === group.id && s.num === groupSteps[0].num);
-          const lastStepActiveIndex = firstStepActiveIndex + groupSteps.length - 1;
-
-          // Determine if group is collapsed
-          const isCollapsed = collapsedGroups[group.id] || false;
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {CHECKLIST_ITEMS.map((item, index) => {
+          const isChecked = form.checklistItems[index] || false;
+          const badgeClass = item.badgeColor === 'amber'
+            ? 'bg-amber-950/45 text-amber-500 border border-amber-900/30'
+            : 'bg-blue-950/40 text-blue-400 border border-blue-900/30';
 
           return (
             <div
-              key={group.id}
-              className={`glass-card overflow-hidden border transition-all duration-300 ${skipped && firstStepActiveIndex > activeSteps.findIndex(s => s.checklistScore === checklistScore) ? 'opacity-30 pointer-events-none' : 'border-[var(--color-border)]'}`}
+              key={item.id}
+              onClick={() => handleCheckChange(index, !isChecked)}
+              className={`flex flex-col p-4 rounded-xl border transition-all duration-300 select-none cursor-pointer ${
+                isChecked
+                  ? 'bg-buy/10 border-buy border-opacity-40 text-[var(--color-text-primary)] shadow-[0_2px_12px_rgba(29,158,117,0.08)]'
+                  : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)] hover:border-[var(--color-border-active)]'
+              }`}
             >
-              {/* Header band */}
-              <div
-                onClick={() => toggleGroupCollapse(group.id)}
-                className={`p-3 flex items-center justify-between cursor-pointer select-none border-b border-[var(--color-border)] ${group.bgClass}`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold font-mono bg-black/35 px-2.5 py-0.5 rounded text-white border border-white/10">
-                    {group.badge}
-                  </span>
-                  <span className="text-sm font-bold tracking-wide">{group.title}</span>
-                  <span className="text-[10px] text-white/60">({groupSteps.length} steps)</span>
-                </div>
-                <span className="text-sm">{isCollapsed ? '➕' : '➖'}</span>
-              </div>
-
-              {!isCollapsed && (
-                <div className="p-4 space-y-4">
-                  {/* Warning banner */}
-                  {group.warning && (
-                    <div className="bg-amber-950/45 border border-amber-500/40 rounded-lg p-3 text-xs text-amber-300">
-                      ⚠️ {group.warning}
-                    </div>
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border transition-all shrink-0 ${
+                  isChecked
+                    ? 'bg-buy border-buy text-white'
+                    : 'border-[var(--color-text-muted)]'
+                }`}>
+                  {isChecked && (
+                    <svg className="w-3.5 h-3.5 stroke-current stroke-[3px]" fill="none" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   )}
-
-                  {/* Steps Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {groupSteps.map((step, localIndex) => {
-                      const activeIndex = firstStepActiveIndex + localIndex;
-                      const isChecked = form.checklistItems[activeIndex] || false;
-                      const isCheckable = activeIndex === 0 || form.checklistItems[activeIndex - 1];
-
-                      return (
-                        <label
-                          key={step.num}
-                          className={`flex flex-col p-3 rounded-lg border transition-all select-none ${
-                            isChecked
-                              ? 'bg-buy/10 border-buy border-opacity-40 text-[var(--color-text-primary)] shadow-[0_2px_8px_rgba(29,158,117,0.05)]'
-                              : isCheckable && !skipped
-                              ? 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-navy)] cursor-pointer'
-                              : 'bg-[var(--color-surface)]/40 border-[var(--color-border)]/50 text-[var(--color-text-muted)] opacity-50 cursor-not-allowed'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              disabled={!isCheckable || skipped}
-                              onChange={(e) => handleCheckChange(activeIndex, e.target.checked)}
-                              className="mt-0.5 w-4 h-4 rounded accent-[var(--color-buy)] cursor-pointer"
-                            />
-                            <div className="flex-1">
-                              <div className="text-xs font-bold leading-normal">
-                                Step {step.num} <span className="text-[10px] opacity-60 uppercase">[{step.type}]</span> — {step.title}
-                              </div>
-                              <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
-                                {step.note}
-                              </div>
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className={`text-xs font-bold leading-snug ${isChecked ? 'text-white' : 'text-[var(--color-text-primary)]'}`}>
+                      {item.title}
+                    </span>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded shrink-0 ${badgeClass}`}>
+                      {item.badge}
+                    </span>
                   </div>
-
-                  {/* Skip Condition Banner */}
-                  {group.skipCondition && !skipped && (
-                    <div className="mt-2 bg-red-950/30 border border-red-500/35 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="text-xs text-red-300">
-                        🛑 <span className="font-bold">Skip Condition:</span> {group.skipCondition.text}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleTriggerSkip(group.skipCondition!.reason)}
-                        className="bg-red-950 hover:bg-red-900 border border-red-500/50 text-red-200 text-[10px] font-bold px-3 py-1.5 rounded transition-all shrink-0 cursor-pointer"
-                      >
-                        Trigger Invalidation (Skip)
-                      </button>
-                    </div>
-                  )}
+                  <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5 leading-relaxed">
+                    {item.note}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
@@ -822,7 +737,7 @@ export default function NewTradePage() {
         </div>
       )}
 
-      {/* Final Summary Card when 36/36 complete */}
+      {/* Final Summary Card when complete */}
       {isComplete && (
         <div className="bg-buy/5 border border-buy border-opacity-45 rounded-xl p-5 shadow-[0_0_20px_rgba(29,158,117,0.1)] space-y-4 animate-fade-in">
           <div className="flex items-center justify-between border-b border-buy border-opacity-25 pb-3">
@@ -873,7 +788,7 @@ export default function NewTradePage() {
         </div>
       )}
 
-      {/* Rest of the form, locked until 36/36 checklist completed */}
+      {/* Rest of the form, locked until checklist completed */}
       <div className="relative">
         {!isComplete && (
           <div className="absolute inset-0 bg-[#0a0a0c]/70 backdrop-blur-[2.5px] z-50 flex items-center justify-center rounded-xl p-4">
@@ -881,7 +796,7 @@ export default function NewTradePage() {
               <div className="text-3xl">🔒</div>
               <h3 className="text-sm font-bold text-sell">Trade Entry Form Locked</h3>
               <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-                Check all 36 items in the pre-trade checklist above to unlock entries, screenshots, and logs.
+                Reach a minimum checklist score of 9 points and click &quot;Open Trade Entry&quot; to unlock entries, screenshots, and logs.
               </p>
             </div>
           </div>

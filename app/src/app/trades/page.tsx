@@ -491,14 +491,14 @@ export default function TradeLogPage() {
                     <td>
                       <span
                         className={`font-mono font-semibold ${
-                          trade.checklistScore === 36
+                          trade.checklistScore >= 9
                             ? 'text-buy'
-                            : trade.checklistScore >= 24
+                            : trade.checklistScore >= 6
                             ? 'text-[var(--color-warning)]'
                             : 'text-sell'
                         }`}
                       >
-                        {trade.checklistScore}/36
+                        {trade.checklistScore}/13
                       </span>
                     </td>
                     <td>
